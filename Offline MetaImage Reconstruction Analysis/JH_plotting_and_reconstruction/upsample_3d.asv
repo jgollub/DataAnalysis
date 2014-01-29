@@ -1,0 +1,13 @@
+
+function [Aup] = upsample_3d(A,upsample_rate)
+
+Nx = size(A,2);
+Ny = size(A,1);
+
+XI = linspace(1,Nx,upsample_rate*Nx);
+Aup = interp3(A,XI,YI,ZI,'spline');
+
+[x y] = meshgrid(linspace(0,Nx,Nx),linspace(0,Ny,Ny));
+[xup yup] = meshgrid(linspace(0,Nx,round(upsample_rate*Nx)),linspace(0,Ny,round(upsample_rate*Ny)));
+
+Aup = interp2(x,y,A,xup,yup,'*cubic');
