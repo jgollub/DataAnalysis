@@ -18,43 +18,43 @@ El = scene_data.El;
 upsample=1;
 slice=1;
 
-%%plot all panels at once
-
-S = svd(H,'econ');  
-Hp = H./(max(S));
-gp = g./(max(S));
-
-lam = min(S)/max(S);
-Phi = @(x) TVnorm_RI(x,size(El,1),size(Az,2),length(Z));
-Psi = @(x,tau) mycalltoTVnewMatrix_RI(x,tau,10,size(El,1),size(Az,2),length(Z));
-
-[obj obj_debias objfunc] = TwIST(gp,Hp,regularization,'lambda',lam,'ToleranceA',tolerance,'Verbose',0,'Phi',Phi,'Psi',Psi,'Monotone',0,'StopCriterion',1);
-
-figure(32)
-semilogy(abs(objfunc(2:end)-objfunc(1:(end-1))))
-xlabel('twist iteration')
-ylabel('magnitude of objective function change')
-drawnow
-
-%reshape obj
-obj = abs(obj);
-nz = length(Z);
-nel = size(El,1);
-naz = size(Az,2);
-nae = nel*naz;
-obj3D = zeros(nel,naz,nz);
-for zn=1:nz
-    objd = obj((1:nae)+nae*(zn-1));
-    obj3D(:,:,zn) = reshape(objd,nel,naz);
-end
-
-figure(33)
-imagesc(tan(Az(1,:))*Z(slice),tan(El(:,1))*Z(slice),upsample_image(obj3D(:,:,slice),upsample));
-axis xy
-title('Reconstruction of All Panels at Once');
-xlabel('X (m)');
-ylabel('Y (m)');
-drawnow;
+% %%plot all panels at once
+% 
+% S = svd(H,'econ');  
+% Hp = H./(max(S));
+% gp = g./(max(S));
+% 
+% lam = min(S)/max(S);
+% Phi = @(x) TVnorm_RI(x,size(El,1),size(Az,2),length(Z));
+% Psi = @(x,tau) mycalltoTVnewMatrix_RI(x,tau,10,size(El,1),size(Az,2),length(Z));
+% 
+% [obj obj_debias objfunc] = TwIST(gp,Hp,regularization,'lambda',lam,'ToleranceA',tolerance,'Verbose',0,'Phi',Phi,'Psi',Psi,'Monotone',0,'StopCriterion',1);
+% 
+% figure(32)
+% semilogy(abs(objfunc(2:end)-objfunc(1:(end-1))))
+% xlabel('twist iteration')
+% ylabel('magnitude of objective function change')
+% drawnow
+% 
+% %reshape obj
+% obj = abs(obj);
+% nz = length(Z);
+% nel = size(El,1);
+% naz = size(Az,2);
+% nae = nel*naz;
+% obj3D = zeros(nel,naz,nz);
+% for zn=1:nz
+%     objd = obj((1:nae)+nae*(zn-1));
+%     obj3D(:,:,zn) = reshape(objd,nel,naz);
+% end
+% 
+% figure(33)
+% imagesc(tan(Az(1,:))*Z(slice),tan(El(:,1))*Z(slice),upsample_image(obj3D(:,:,slice),upsample));
+% axis xy
+% title('Reconstruction of All Panels at Once');
+% xlabel('X (m)');
+% ylabel('Y (m)');
+% drawnow;
 
 %% 
 
@@ -81,10 +81,6 @@ end
 
 %figure to plot subfigures into
 figure(36)
-
-
-
-
 
 sumPlot=[];
 
@@ -127,29 +123,29 @@ end
 switch i
     case 1
         plotpos=4;
-        plotPanLable='A2';
+        plotPanLabel='A2';
     case 2
         plotpos=1;
-        plotPanLable='A3';
+        plotPanLabel='A3';
     case 3
         plotpos=5;
-        plotPanLable='B2';
+        plotPanLabel='B2';
     case 4
         plotpos=2;
-        plotPanLable='B3';
+        plotPanLabel='B3';
     case 5
         plotpos=6;
-        plotPanLable='C2';
+        plotPanLabel='C2';
     case 6
         plotpos=3;
-        plotPanLable='C3';
+        plotPanLabel='C3';
 end
 
 figure(35)
-subplot(2,Num_figs,plotpos);
+% subplot(2,Num_figs,plotpos);
 imagesc(tan(Az(1,:))*Z(slice),tan(El(:,1))*Z(slice),upsample_image(obj3D(:,:,slice),upsample));
 axis xy
-title(plotPanLable);
+title(plotPanLabel);
 xlabel('X (m)');
 ylabel('Y (m)');
 %suptitle('Individual Panel Reconstructions')
