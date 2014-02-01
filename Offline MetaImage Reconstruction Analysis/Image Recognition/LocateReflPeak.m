@@ -1,19 +1,21 @@
-function peakPos=LocateReflPeak(x_range, y_range,recon_array,recon_fig)
+function peakPos=LocateReflPeak(x_range, y_range,Recon_obj,recon_fig)
 
 
 %set function parameters and find max
 
-thres = (max([min(max(recon_array,[],1))  min(max(recon_array,[],2))]));
-filt = (fspecial('gaussian', 3,1));
-%filt = (fspecial('average', 3));
-edg =3;
+thres = (max([min(max(Recon_obj,[],1))  min(max(Recon_obj,[],2))]));
+max_val=max(max(Recon_obj));
+
+filt = (fspecial('gaussian',10,1));
+%filt = (fspecial('average', 1));
+edge =3;
 res=2;
 %use centroid fitting to find max position (between pixels)
 %%find peak position
 
 %scale function for plotting
 
-[ysize xsize]=size(recon_array);
+[ysize xsize]=size(Recon_obj);
 
 %y-coordinate
 yaxis_slope=(y_range(end)-y_range(1))/(ysize-1);
@@ -27,13 +29,16 @@ x_pos=@(x) xaxis_slope*x+x_c;
 
 %find peak position in pixels
 figure(36)
-peakPos=FastPeakFind(recon_array, thres, filt,edg, res);
+peak_Pixels=FastPeakFind(Recon_obj./max_val, thres, filt,edge, res).';
+
 figure(recon_fig)
-for i=1:length(peakPos)/2
+for i=1:length(peak_Pixels)/2
+    
+    peakPos(i,:)=[x_pos(peak_Pixels(i,1)) y_pos(peak_Pixels(i,2))]; %x & y pos
     if nargin>3
         figure(recon_fig);
         hold on;
-        plot(x_pos(peakPos(i)),y_pos(peakPos(i+1)),'Marker','+','Color',[.88 .48 0],'MarkerSize',30)
+        plot(peakPos(i,1),peakPos(i,2),'Marker','+','Color',[.88 .48 0],'MarkerSize',30)
         hold off;
     end
 end
