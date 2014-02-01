@@ -18,7 +18,11 @@ El = scene_data.El;
 upsample=1;
 slice=2;
 
-%% 
+%Load Panel Positions
+load('Panel_Positions.mat');
+
+%load probe positions
+load('Probe_Positions.mat');
 
 %size of H matrix
 Num_Panels=(size(scene_data.H,1)/(freqs*RF_pathPerPanel))

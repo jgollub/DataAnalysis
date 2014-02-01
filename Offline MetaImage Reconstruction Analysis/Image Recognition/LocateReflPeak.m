@@ -4,8 +4,8 @@ function peakPos=LocateReflPeak(x_range, y_range,recon_array,recon_fig)
 %set function parameters and find max
 
 thres = (max([min(max(recon_array,[],1))  min(max(recon_array,[],2))]));
- %filt = (fspecial('gaussian', 3,1));
-filt = (fspecial('average', 3));
+filt = (fspecial('gaussian', 3,1));
+%filt = (fspecial('average', 3));
 edg =3;
 res=2;
 %use centroid fitting to find max position (between pixels)
