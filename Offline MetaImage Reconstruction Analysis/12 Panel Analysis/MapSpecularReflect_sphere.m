@@ -16,45 +16,7 @@ El = scene_data.El;
 
 %specific slice to image
 upsample=1;
-slice=1;
-
-% %%plot all panels at once
-% 
-% S = svd(H,'econ');  
-% Hp = H./(max(S));
-% gp = g./(max(S));
-% 
-% lam = min(S)/max(S);
-% Phi = @(x) TVnorm_RI(x,size(El,1),size(Az,2),length(Z));
-% Psi = @(x,tau) mycalltoTVnewMatrix_RI(x,tau,10,size(El,1),size(Az,2),length(Z));
-% 
-% [obj obj_debias objfunc] = TwIST(gp,Hp,regularization,'lambda',lam,'ToleranceA',tolerance,'Verbose',0,'Phi',Phi,'Psi',Psi,'Monotone',0,'StopCriterion',1);
-% 
-% figure(32)
-% semilogy(abs(objfunc(2:end)-objfunc(1:(end-1))))
-% xlabel('twist iteration')
-% ylabel('magnitude of objective function change')
-% drawnow
-% 
-% %reshape obj
-% obj = abs(obj);
-% nz = length(Z);
-% nel = size(El,1);
-% naz = size(Az,2);
-% nae = nel*naz;
-% obj3D = zeros(nel,naz,nz);
-% for zn=1:nz
-%     objd = obj((1:nae)+nae*(zn-1));
-%     obj3D(:,:,zn) = reshape(objd,nel,naz);
-% end
-% 
-% figure(33)
-% imagesc(tan(Az(1,:))*Z(slice),tan(El(:,1))*Z(slice),upsample_image(obj3D(:,:,slice),upsample));
-% axis xy
-% title('Reconstruction of All Panels at Once');
-% xlabel('X (m)');
-% ylabel('Y (m)');
-% drawnow;
+slice=2;
 
 %% 
 
@@ -84,7 +46,7 @@ figure(36)
 
 sumPlot=[];
 
-for i=1:1
+for i=2:2
     %% scene reconstruction
   Hpanel_i=H(1+freqs*Num_Panels*(i-1):freqs*Num_Panels*i,:);
  gpanel_i=g(1+freqs*Num_Panels*(i-1):freqs*Num_Panels*i,:);
@@ -142,6 +104,7 @@ switch i
 end
 
 figure(35)
+set(gca,'YDir','reverse')
 % subplot(2,Num_figs,plotpos);
 imagesc(tan(Az(1,:))*Z(slice),tan(El(:,1))*Z(slice),upsample_image(obj3D(:,:,slice),upsample));
 axis xy

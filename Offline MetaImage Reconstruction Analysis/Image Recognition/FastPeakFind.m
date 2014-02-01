@@ -176,6 +176,8 @@ if any(d(:))  ; %for the case of non zero raw image
                 
         end
         
+        imagesc(d);
+        
         if savefileflag
             % previous version used dlmwrite, which can be slower than  fprinf
             %             dlmwrite([filename '.txt'],[cent],   '-append', ...
