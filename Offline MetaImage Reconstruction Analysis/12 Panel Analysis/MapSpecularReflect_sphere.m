@@ -16,7 +16,7 @@ El = scene_data.El;
 
 %specific slice to image
 upsample=1;
-slice=2;
+slices=1:4;
 
 %Load Panel Positions
 load('Panel_Positions.mat');
@@ -52,7 +52,7 @@ sumPlot=[];
 
 for i=2:2
     %% scene reconstruction
-  Hpanel_i=H(1+freqs*Num_Panels*(i-1):freqs*Num_Panels*i,:);
+ Hpanel_i=H(1+freqs*Num_Panels*(i-1):freqs*Num_Panels*i,:);
  gpanel_i=g(1+freqs*Num_Panels*(i-1):freqs*Num_Panels*i,:);
 
 S = svd(Hpanel_i,'econ');  
@@ -107,14 +107,36 @@ switch i
         plotPanLabel='C3';
 end
 
-figure(35)
+recon_fig=figure(35);
+for i_slice=slices
+subplot(ceil(slices/2),i)
 set(gca,'YDir','reverse')
 % subplot(2,Num_figs,plotpos);
-imagesc(tan(Az(1,:))*Z(slice),tan(El(:,1))*Z(slice),upsample_image(obj3D(:,:,slice),upsample));
+Az_range=tan(Az(1,:))*Z(i_slice);
+El_range=tan(El(:,1))*Z(i_slice);
+Recon_obj=upsample_image(obj3D(:,:,i_slice),upsample);
+
+imagesc(Az_range,El_range,Recon_obj);
 axis xy
 title(plotPanLabel);
 xlabel('X (m)');
 ylabel('Y (m)');
+
+%solve for max reflection
+Spot_loc=LocateReflPeak(Az_range, El_range,Recon_obj,recon_fig);
+reflect_pos(i_slice,:)=Spot_loc.';
+
+%specular reflection of sphere
+Linc_vec=[Spot_loc.' Z(i_slice)]-Panel_Pos(i_slice,:,:);
+LRefl_vec=[Spot_loc.' Z(i_slice)]-Probe_Pos(i_slice,:,:);
+
+norm_vec=-(Linc_vec+Lrefl_vec)/abs(Linc_vec+Lrefl_vec);
+
+%center of sphere
+S_vec=Linc_vec-R_sph*norm_vec;
+
+
+
 %suptitle('Individual Panel Reconstructions')
 % set(gcf,'NextPlot','add');
 % axes;
