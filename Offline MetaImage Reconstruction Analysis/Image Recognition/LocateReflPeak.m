@@ -1,4 +1,4 @@
-function peakPos=LocateReflPeak(x_range, y_range,Recon_obj,recon_fig)
+function [peakPos peak_Pixels]=LocateReflPeak(x_range, y_range,Recon_obj,recon_fig)
 
 
 %set function parameters and find max
@@ -6,9 +6,9 @@ function peakPos=LocateReflPeak(x_range, y_range,Recon_obj,recon_fig)
 thres = (max([min(max(Recon_obj,[],1))  min(max(Recon_obj,[],2))]));
 max_val=max(max(Recon_obj));
 
-filt = (fspecial('gaussian',10,1));
+filt = (fspecial('gaussian',2,1));
 %filt = (fspecial('average', 1));
-edge =3;
+edge =1;
 res=2;
 %use centroid fitting to find max position (between pixels)
 %%find peak position
@@ -29,7 +29,9 @@ x_pos=@(x) xaxis_slope*x+x_c;
 
 %find peak position in pixels
 figure(36)
-peak_Pixels=FastPeakFind(Recon_obj./max_val, thres, filt,edge, res).';
+%peak_Pixels=FastPeakFind(Recon_obj, thres, filt, edge, res).';
+[~, peak_Pixels(1)]=max(max(Recon_obj,[],1))
+[~, peak_Pixels(2)]=max(max(Recon_obj,[],2))
 
 figure(recon_fig)
 for i=1:length(peak_Pixels)/2

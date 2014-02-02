@@ -5,8 +5,8 @@ regularization=.0003;
 tolerance=1e-5;
 
 %% select H and g for individual panel reconstruction
-Hpanel_i=H(1+probe*Num_Panels*freqs*(panel-1):probe*Num_Panels*freqs*panel,:);
-gpanel_i=g(1+probe*Num_Panels*freqs*(panel-1):probe*Num_Panels*freqs*panel,:);
+Hpanel_i=H(1+(probe-1)*Num_Panels*freqs+freqs*(panel-1):(probe-1)*Num_Panels*freqs+freqs*panel,:);
+gpanel_i=g(1+(probe-1)*Num_Panels*freqs+freqs*(panel-1):(probe-1)*Num_Panels*freqs+freqs*panel,:);
 
 S = svd(Hpanel_i,'econ');
 Hp = Hpanel_i./(max(S));

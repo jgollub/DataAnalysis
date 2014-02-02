@@ -21,7 +21,7 @@ Az = scene_data.Az;
 El = scene_data.El;
 
 %specific slice to image
-upsample=1;
+upsample=4;
 Panel_Probe_combo=1:1;
 slices=1:6;
 
@@ -58,7 +58,7 @@ Obj_funct_Plot=figure(36)
 for j_probe=1:6;
     for i_panel=1:12;
         
-        figure(semilogy)
+        figure(Obj_funct_Plot)
         hold on;
         [obj obj_debias objfunc]=singlePanel_recon(H,g,Az,El,Z,Num_Panels,freqs,j_probe,i_panel);
         
@@ -80,33 +80,41 @@ for j_probe=1:6;
             obj3D(:,:,zn) = reshape(objd,nel,naz);
         end
         
-        %%smooth object before testing for max region
-        %Smoothed_Obj=conv2(single(obj3D(:,:,slices)),fspecial('gaussian',7, 1),'same');
-        %[maxplot_val max_index]=max(max(max(obj3D(:,:,slices))))
+        %find max slice
+        upsamp_obj3D=[];
+        for i=slices
+            upsamp_obj3D(:,:,i)=upsample_image(obj3D(:,:,i),upsample);
+        end
         
-        [maxplot_val max_index]=max(max(max(obj3D(:,:,slices))))
+        [maxplot_val max_index]=max(max(max(upsamp_obj3D(:,:,slices))))
+        
+        
         recon_fig=figure(35);
         for i_slice=slices
             subplot(ceil(length(slices)/2),2,i_slice);
             set(gca,'YDir','reverse')
             % subplot(2,Num_figs,plotpos);
+            
             Az_range=tan(Az(1,:))*Z(i_slice);
             El_range=tan(El(:,1))*Z(i_slice);
-            Recon_obj=upsample_image(obj3D(:,:,i_slice),upsample);
             
-            imagesc(Az_range,El_range,Recon_obj,[0 maxplot_val]);
+            upsamp_Az_range=linspace(Az_range(1),Az_range(end),upsample*length(Az_range));
+            upsamp_El_range=linspace(El_range(1),El_range(end),upsample*length(El_range));
+            %plot image
+            imagesc(upsamp_Az_range,upsamp_El_range,abs(upsamp_obj3D(:,:,i_slice)),[0 maxplot_val]);
+            
             axis xy
             axis equal
             axis tight
             
             
-            title(['slice num: ',num2str(i_slice),'; Z_pos', num2str(Z(i_slice))]);
+            title(['slice num: ',num2str(i_slice),'; Z Pos:', num2str(Z(i_slice))]);
             xlabel('Az (m)');
             ylabel('El (m)');
             
             %solve for max reflection
             if i_slice==max_index
-                Spot_loc=LocateReflPeak(Az_range, El_range,Recon_obj,recon_fig);
+                [Spot_loc Spot_pixels]=LocateReflPeak(upsamp_Az_range,upsamp_El_range,upsamp_obj3D(:,:,i_slice)./maxplot_val,recon_fig); %normalize max value to one seems to work better with image recon ??
                 if length(Spot_loc(:,1))>1
                     error('more than one max found')
                 end
@@ -147,7 +155,7 @@ for j_probe=1:6;
     
     figure(Sphere_Pos_fig)
     hold all;
-    probe_group_color=[1-j_probe/Num_Probes,1-j_probe/Num_Probes,0];
+    probe_group_color=[1-j_probe/Num_Probes,j_probe/Num_Probes,0];
     
     subplot(2,2,1)
     hold all;
