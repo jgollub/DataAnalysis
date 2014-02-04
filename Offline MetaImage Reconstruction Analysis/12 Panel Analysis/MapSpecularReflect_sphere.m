@@ -3,15 +3,20 @@
 R_sph=.1262; %m
 Sphere_Pos_fig=figure(99);
 
-xplot_range=[-.1 .2];
-yplot_range=[.2 .5];
-zplot_range=[-1.4,-.8];
-
 sphere_center=[];
 %parse data. each chunck of H matrix-> 101 freqs X 6 switches= 606 measurement modes per panel
 freqs=101;
 RF_pathPerPanel=6;
 Num_Probes=6;
+
+%plotting settings
+xplot_range=[-.1 .2];
+yplot_range=[.2 .5];
+zplot_range=[-1.4,-.8];
+
+ probe_group_color=zeros(Num_Probes,3);
+ Legend_fill=cell(Num_Probes,1);
+
 
 % rf data
 H = scene_data.H;
@@ -150,62 +155,51 @@ for j_probe=1:6;
         sphere_center(i_panel,1:3,j_probe)=S_vec;
     end
     
+%     
+%     % plot Sphere calculated positions
+% 
+%     %for j_probe=1:6
+%         
+%         figure(Sphere_Pos_fig)
+%         hold all;
+%         probe_group_color(j_probe,:)=[1-j_probe/Num_Probes,j_probe/Num_Probes,0];
+%         Legend_fill{j_probe}=['\color[rgb]{',num2str(probe_group_color(j_probe,1)),',',num2str(probe_group_color(j_probe,:)),',',num2str(probe_group_color(j_probe,3)),'}Probe ',num2str(j_probe)]
+%     %end
+%     
+%     subplot(2,2,1)
+%     hold all;
+%     plot(sphere_center(:,1,j_probe),sphere_center(:,2,j_probe),'Marker', '.','Color',probe_group_color(j_probe,:) ,'LineStyle','none')
+%     xlabel('X (m)');
+%     ylabel('Y (m)');
+%     xlim(xplot_range);
+%     ylim(yplot_range);
+%     title('XY Alignment')
+%     drawnow;
+%     
+%     subplot(2,2,2)
+%     hold all;
+%     plot(sphere_center(:,2,j_probe),sphere_center(:,3,j_probe),'Marker', '.','Color',probe_group_color(j_probe,:), 'LineStyle','none')
+%     xlabel('Y (m)');
+%     ylabel('Z (m)');
+%     xlim(yplot_range);
+%     ylim(zplot_range);
+%     title('YZ Alignment')
+%     drawnow;
+%     
+%     subplot(2,2,3)
+%     hold all;
+%     plot(sphere_center(:,3,j_probe),sphere_center(:,1,j_probe),'Marker', '.','Color',probe_group_color(j_probe,:) ,'LineStyle','none')
+%     xlabel('Z (m)');
+%     ylabel('X (m)');
+%     xlim(zplot_range);
+%     ylim(xplot_range);
+%     title('ZX Alignment');
+%     drawnow;
+%     
+%      LegendBar=legend(Legend_fill)
+%      set(LegendBar, 'Position', [.7 .15 .05 .3])
+             
+
+     %suptitle('Reconstructed Center of Sphere')
     
-    % plot Sphere calculated positions
-    
-    figure(Sphere_Pos_fig)
-    hold all;
-    probe_group_color=[1-j_probe/Num_Probes,j_probe/Num_Probes,0];
-    
-    subplot(2,2,1)
-    hold all;
-    plot(sphere_center(:,1,j_probe),sphere_center(:,2,j_probe),'Marker', '.','Color',probe_group_color ,'LineStyle','none')
-    xlabel('X (m)');
-    ylabel('Y (m)');
-    xlim(xplot_range);
-    ylim(yplot_range);
-    title('XY Alignment')
-    drawnow;
-    
-    subplot(2,2,2)
-    hold all;
-    plot(sphere_center(:,2,j_probe),sphere_center(:,3,j_probe),'Marker', '.','Color',probe_group_color, 'LineStyle','none')
-    xlabel('Y (m)');
-    ylabel('Z (m)');
-    xlim(yplot_range);
-    ylim(zplot_range);
-    title('YZ Alignment')
-    drawnow;
-    
-    subplot(2,2,3)
-    hold all;
-    plot(sphere_center(:,3,j_probe),sphere_center(:,1,j_probe),'Marker', '.','Color',probe_group_color ,'LineStyle','none')
-    xlabel('Z (m)');
-    ylabel('X (m)');
-    xlim(zplot_range);
-    ylim(xplot_range);
-    title('ZX Alignment');
-    drawnow;
-    
-    %suptitle('Reconstructed Center of Sphere')
-    
-    % set(gcf,'NextPlot','add');
-    % axes;
-    % htitle=title('Individual Panel Reconstructions');
-    % set(gca,'Visible', 'off');
-    % set(htitle,'Visible', 'on');
-    %plot_range_slices(obj3D,Az,El,Z,3)
-    % figure(34)
-    % set(gcf,'NextPlot','add')
-    % hold on;
-    % if i==1
-    %     sumPlot=upsample_image(obj3D(:,:,slice),upsample)./Num_Panels;
-    % elseif i~1
-    %     sumPlot=sumPlot+upsample_image(obj3D(:,:,slice),upsample)./Num_Panels;
-    
-    % imagesc(tan(Az(1,:))*Z(slice),tan(El(:,1))*Z(slice),sumPlot);
-    % axis xy
-    % title('Sum of Individual Panel Reconstructions')
-    % xlabel('X (m)');
-    % ylabel('Y (m)');
 end
