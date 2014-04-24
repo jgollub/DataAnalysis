@@ -22,21 +22,21 @@ slice=3;
 
 %plot all panels at once
 
-S = svd(H,'econ');  
-Hp = H./(max(S));
-gp = g./(max(S));
-
-lam = min(S)/max(S);
-Phi = @(x) TVnorm_RI(x,size(El,1),size(Az,2),length(Z));
-Psi = @(x,tau) mycalltoTVnewMatrix_RI(x,tau,10,size(El,1),size(Az,2),length(Z));
-
-[obj obj_debias objfunc] = TwIST(gp,Hp,regularization,'lambda',lam,'ToleranceA',tolerance,'Verbose',0,'Phi',Phi,'Psi',Psi,'Monotone',0,'StopCriterion',1);
-
-figure(32)
-semilogy(abs(objfunc(2:end)-objfunc(1:(end-1))))
-xlabel('twist iteration')
-ylabel('magnitude of objective function change')
-drawnow
+% S = svd(H,'econ');  
+% Hp = H./(max(S));
+% gp = g./(max(S));
+% 
+% lam = min(S)/max(S);
+% Phi = @(x) TVnorm_RI(x,size(El,1),size(Az,2),length(Z));
+% Psi = @(x,tau) mycalltoTVnewMatrix_RI(x,tau,10,size(El,1),size(Az,2),length(Z));
+% 
+% [obj obj_debias objfunc] = TwIST(gp,Hp,regularization,'lambda',lam,'ToleranceA',tolerance,'Verbose',0,'Phi',Phi,'Psi',Psi,'Monotone',0,'StopCriterion',1);
+% 
+% figure(32)
+% semilogy(abs(objfunc(2:end)-objfunc(1:(end-1))))
+% xlabel('twist iteration')
+% ylabel('magnitude of objective function change')
+% drawnow
 
 %reshape obj
 obj = abs(obj);
@@ -147,7 +147,8 @@ switch i
 end
 
 figure(35)
-subplot(2,Num_figs,plotpos);
+Num_figs=6 %!!!!!!!!!!!!!
+subplot(2,Num_figs/2,plotpos);
 imagesc(tan(Az(1,:))*Z(slice),tan(El(:,1))*Z(slice),upsample_image(obj3D(:,:,slice),upsample));
 axis xy
 title(plotPanLable);
