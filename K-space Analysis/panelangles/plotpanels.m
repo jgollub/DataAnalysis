@@ -19,8 +19,8 @@ maxpt = [ maxcoor(3) maxcoor(4) ];
 ctr = 0.5*(minpt+maxpt);
 spandif = maxpt-minpt;
 
-minpt = ctr-1*spandif;
-maxpt = ctr+1*spandif;
+minpt = ctr-0.75*spandif;
+maxpt = ctr+0.75*spandif;
 
 sampx = ceil((maxpt(1)-minpt(1))/sampconv);
 sampy = ceil((maxpt(2)-minpt(2))/sampconv);
