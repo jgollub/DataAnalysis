@@ -44,11 +44,12 @@ probe_nfs=p1_noProbeCorrection;
 %reshape the data to be imported as a panel
 data.f=linspace(17.5e9,26.5e9,101);
 
-x_numel=numel(unique(probe_nfs(:,2)));
-y_numel=numel(unique(probe_nfs(:,3)));
-total_meas_pts=x_numel*y_numel;
-data.y=reshape(probe_nfs(1:total_meas_pts,2),y_numel,x_numel);
-data.x=reshape(probe_nfs(1:total_meas_pts,3),y_numel,x_numel);
+xGrid=unique(probe_nfs(:,2));
+yGrid=unique(probe_nfs(:,3));
+x_numel=numel(xGrid);
+y_numel=numel(yGrid);
+
+[data.x,data.y]=meshgrid(xGrid, yGrid);
 
 data.measurements=reshape(10.^(probe_nfs(:,4)/20).*exp(j*(pi/180).*probe_nfs(:,5)),...
     x_numel,...
@@ -58,7 +59,7 @@ data.measurements=reshape(10.^(probe_nfs(:,4)/20).*exp(j*(pi/180).*probe_nfs(:,5
     );
 
 %permute to put into matlab format [yval xval freq pol]
-data.measurements=permute(data.measurements, [1 2 4 3]);
+data.measurements=permute(data.measurements, [2 1 4 3]);
 
 for ii=1:101
 data.measurements(:,:,ii,:)=data.measurements(:,:,ii,:)*exp(-j*probe_phase_meas(ii))/(cables_response(ii));

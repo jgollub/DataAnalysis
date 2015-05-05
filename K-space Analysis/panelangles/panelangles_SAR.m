@@ -61,7 +61,7 @@ for curfreq=freqscal
                         end
                     end
                 end
-            end
+            end 
         end
     end
 end
