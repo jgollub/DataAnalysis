@@ -1,4 +1,4 @@
-% Find the Least Root Mean Square distance 
+ % Find the Least Root Mean Square distance 
 % between two sets of N points in D dimensions
 % and the rigid transformation (i.e. translation and rotation) 
 % to employ in order to bring one set that close to the other,

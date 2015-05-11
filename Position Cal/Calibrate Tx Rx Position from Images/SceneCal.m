@@ -237,14 +237,30 @@ end
 % start with 10 points
 numScatterers=10;
 imgDomain_sigma=[];
-
+minSeparation=.1;
 rng(2);
 % scattererIndex=randi(length(imgDomain),1,numScatteres);
-x_range=-(min(imgDomain_fg(:,1))-max(imgDomain_fg(:,1))).*rand(numScatterers,1)+min(imgDomain_fg(:,1));
-y_range=-(min(imgDomain_fg(:,2))-max(imgDomain_fg(:,2))).*rand(numScatterers,1)+min(imgDomain_fg(:,2));
-z_range=-(min(imgDomain_fg(:,3))-max(imgDomain_fg(:,3))).*rand(numScatterers,1)+min(imgDomain_fg(:,3));
-
-scattererPositions=[x_range, y_range,z_range];
+for i=1:numScatterers
+    x_range=-(min(imgDomain_fg(:,1))-max(imgDomain_fg(:,1))).*rand(1,1)+min(imgDomain_fg(:,1));
+    y_range=-(min(imgDomain_fg(:,2))-max(imgDomain_fg(:,2))).*rand(1,1)+min(imgDomain_fg(:,2));
+    z_range=-(min(imgDomain_fg(:,3))-max(imgDomain_fg(:,3))).*rand(1,1)+min(imgDomain_fg(:,3));
+    scattererPositions(i,:)=[x_range, y_range,z_range];
+    
+    if i>1
+        sct_distance=sum(bsxfun(@minus,scattererPositions(1:i-1,:),scattererPositions(i,:)).^2,2).^(1/2);
+        %values for f of small region (log)
+        
+        while any(sct_distance<minSeparation);
+            x_range=-(min(imgDomain_fg(:,1))-max(imgDomain_fg(:,1))).*rand(1,1)+min(imgDomain_fg(:,1));
+            y_range=-(min(imgDomain_fg(:,2))-max(imgDomain_fg(:,2))).*rand(1,1)+min(imgDomain_fg(:,2));
+            z_range=-(min(imgDomain_fg(:,3))-max(imgDomain_fg(:,3))).*rand(1,1)+min(imgDomain_fg(:,3));
+            scattererPositions(i,:)=[x_range, y_range,z_range]
+            sct_distance=sum(bsxfun(@minus,scattererPositions(1:i-1,:),scattererPositions(i,:)).^2,2).^(1/2)
+        end
+        
+    end
+    
+end
 
 %in order to maintain normalization between experiment and virtualized g
 imgDomain_virtualizer=zeros(2*numScatterers,3);
@@ -269,7 +285,8 @@ save('D:\MetaImager\Virtualizer Data\Imported Panels and Probes\LastSimulatedg.m
     'panelLocations',...
     'shift',...
     'rotation',...
-    'PerceivedPanelLocations')
+    'PerceivedPanelLocations',...
+    'scattererPositions')
 
 %% %%% Reconstruct over all panel/probes ====================================
 
@@ -323,6 +340,7 @@ load('D:\MetaImager\Virtualizer Data\Imported Panels and Probes\LastBuiltLookupT
   sysConfig.nPanels            = numel(find(choosePanels));
   
 
+
 nLevels =4; % nearest neighbor subdomains used in interpolation, can be 1, 2, 3, or 4
 delta   =4; % error factor: small delta -> more accurate, big delta -> faster
 % get appropriate subdomain and frequency bin sizes, can override if
@@ -338,7 +356,7 @@ fprintf('finished in %0.2f seconds\n', etime(clock(),mark));
 
 %% recon full region
 mark=clock();
-[f_mf,indices, timing] = reconstructionSelectPanels(sysConfig,...
+[f_mf,indices, locs, timing] = reconstructionSelectPanels(sysConfig,...
                                             g,... %Exp_data.g,...
                                             imgDomain,...
                                             probes, probeTables,chooseProbes,...
@@ -346,14 +364,20 @@ mark=clock();
                                             partitioning,...
                                             R_k...
                                             );
+                                        
+partitioning.indices=indices;         
+partitioning.locs=locs;
 fprintf('[Done] %f(s)\n', etime(clock(),mark));
 %% Plot Results ===========================================================
 fprintf('Plotting results... '); 
 fg =figure(29);
+
 fg.Position=[37    90   561   840];
 subplot(2,1,1)
 cla
-f_plot=volume_plot2(fg, imgDomain, f_mf, indices, domainGrid, 'log',2); title('look-up table')
+plotScatters(f_mf, indices,imgDomain, domainGrid, 'Type','linear');
+% f_plot=volume_plot2(fg, imgDomain, f_mf, indices, domainGrid, 'log',2); 
+title('look-up table')
 view(-33,16)
 xlabel('x(m)'); ylabel('y(m)'); zlabel('z(m)');
 alpha('color');
@@ -366,29 +390,8 @@ figure(fg);
 subplot(2,1,2)
 cla
 
-dB_threshhold=15;
-
-f = zeros(size(imgDomain, 1), 1);
-f(indices) = abs(f_mf).^2;
-
-f_plot=reshape(f,domainGrid);
-
-f_db       = 20*log10(abs(f_plot));
-thresh     = max(max(max(f_db))) -dB_threshhold;
-f          = ones(size(f_plot))*thresh;
-f_plot = 20*log10(abs(f_plot));
-f_plot(f_plot<thresh)= thresh;
-
-hf = vol3d('cdata',  f_plot,...
-    'XData', [min(imgDomain(:,1)), max(imgDomain(:,1))],...
-    'YData', [min(imgDomain(:,2)), max(imgDomain(:,2))],...
-    'ZData', [min(imgDomain(:,3)), max(imgDomain(:,3))]...
-    );
-view(3);
-axis image;
-view(-70,16);
-hold on;
-% scatter3(imgDomain(scattererIndex,1),imgDomain(scattererIndex,2),imgDomain(scattererIndex,3),4,'r')
+f_plot=plotScatters(f_mf, indices,imgDomain, domainGrid, 'Type','log');
+hold on
 scatter3(scattererPositions(:,1),scattererPositions(:,2),scattererPositions(:,3),4,'r')
 
 % Locate scatters & calculate reduced region to reconstruct over
@@ -396,39 +399,35 @@ figure(fg);
 subplot(2,1,2)
 
 num_points=10;
-small_imgDomain=cell(length(num_points));
+subImgDomain=cell(length(num_points));
 lookWithinRadius=0.03;
 
 f_plot_dummy=f_plot;
 
 solvedGlobalPosition=zeros(num_points,3);
-for i=1:num_points
-     [max_value(i),index_max(i)]=max(f_plot_dummy(:));
 
-%       solvedGlobalPosition(i,:)=imgDomain(index_max(i),:);
-    hold on;
-
-    %find distance
-    pt_distance=sum(bsxfun(@minus,imgDomain,imgDomain(index_max(i),:)).^2,2).^(1/2);
-    %values for f of small region (log)
-    f_smallImgDomain{i}=f_plot_dummy(pt_distance<lookWithinRadius);   
-    small_imgDomain{i}=imgDomain(pt_distance<lookWithinRadius,:);
-    
-     %solve for max position using centroid
-      x_centroid=sum(small_imgDomain{i}(:,1).*abs(f_smallImgDomain{i}).^2)/sum(abs(f_smallImgDomain{i}).^2);
-      y_centroid=sum(small_imgDomain{i}(:,2).*abs(f_smallImgDomain{i}).^2)/sum(abs(f_smallImgDomain{i}).^2);
-      z_centroid=sum(small_imgDomain{i}(:,3).*abs(f_smallImgDomain{i}).^2)/sum(abs(f_smallImgDomain{i}).^2);
-      solvedGlobalPosition(i,:)=[x_centroid,y_centroid,z_centroid];
-      
-       f_plot_dummy(pt_distance<lookWithinRadius)=-inf;
-      
-          %determine sub reconstruction zones
-   % smallReconstructionRegionPlot(29,imgDomain(index_max(i),:), lookWithinRadius,num2str(i));
-end
-%plot globally solved for positions of scatterers
+%estimate position of target scatteres
+[solvedGlobalPosition, subImgDomain, subIndices]=filterScatterers(f_mf,...
+               indices, ...
+               imgDomain, ...
+               domainGrid,...
+               15,...
+               num_points,...
+               lookWithinRadius ...
+               ); 
+           
+ partitioning.subIndices=subIndices;
+ 
+%plot positions of scatterers that have been solved for globally
  scatter3(solvedGlobalPosition(:,1),solvedGlobalPosition(:,2),solvedGlobalPosition(:,3),4,'black')
+for i=1:10
+    subplot(2,1,2)
+ smallReconstructionRegionPlot(figure(fg), solvedGlobalPosition(i,:),lookWithinRadius,num2str(i))
+end
 
- %sort values scatters and solved positions
+
+ %sort positions of the scatterers such that they can be compared agains
+ %the real positions (for fake_g)
  A1=repmat(scattererPositions,1,1, ...
      length(solvedGlobalPosition));
  for i=1:length(scattererPositions)
@@ -441,12 +440,12 @@ MSE_pts=sum(sum((diff).^2,2),1)/length(scattererPositions)
 
  %% recon with makeH directly calculated H
  
- collected_small_imgDomain=cat(1,small_imgDomain{:});
+ collected_small_imgDomain=cat(1,subImgDomain{:});
  subIndices=[];
  counter=0;
- for i=1:numel(small_imgDomain)
- subIndices{i}=(1+counter):(counter+length(small_imgDomain{i}))
- counter=counter+length(small_imgDomain{i})
+ for i=1:numel(subImgDomain)
+ subIndices{i}=(1+counter):(counter+length(subImgDomain{i}))
+ counter=counter+length(subImgDomain{i})
  end
  
  panelFields = dipoles_to_fieldsEXP3(panels, collected_small_imgDomain);
@@ -461,36 +460,37 @@ MSE_pts=sum(sum((diff).^2,2),1)/length(scattererPositions)
           collected_small_imgDomain(:,2),...
           collected_small_imgDomain(:,3),abs(f_abs_est).^2./max(abs(f_abs_est).^2))
 hold on
-scatter3(scattererIndex(:,,1),scattererIndex(:,,2),scattererIndex(:,,3),4,'r')
+
+scatter3(scattererPositions(:,1),scattererPositions(:,2),scattererPositions(:,3),4,'r')
+
 for i=1:num_points
      %solve for max position using centroid
-      x_centroid=sum(small_imgDomain{i}(:,1).*abs(f_abs_est(subIndices{i})).^2)/sum(abs(f_abs_est(subIndices{i})).^2);
-      y_centroid=sum(small_imgDomain{i}(:,2).*abs(f_abs_est(subIndices{i})).^2)/sum(abs(f_abs_est(subIndices{i})).^2);
-      z_centroid=sum(small_imgDomain{i}(:,3).*abs(f_abs_est(subIndices{i})).^2)/sum(abs(f_abs_est(subIndices{i})).^2);
+      x_centroid=sum(subImgDomain{i}(:,1).*abs(f_abs_est(subIndices{i})).^2)/sum(abs(f_abs_est(subIndices{i})).^2);
+      y_centroid=sum(subImgDomain{i}(:,2).*abs(f_abs_est(subIndices{i})).^2)/sum(abs(f_abs_est(subIndices{i})).^2);
+      z_centroid=sum(subImgDomain{i}(:,3).*abs(f_abs_est(subIndices{i})).^2)/sum(abs(f_abs_est(subIndices{i})).^2);
       solvedGlobalPosition_absH(i,:)=[x_centroid,y_centroid,z_centroid];
-end     
-  scatter3(solvedGlobalPosition_absH(:,1),solvedGlobalPosition_absH(:,2),solvedGlobalPosition_absH(:,3),4,'black')
-
+end   
+hold on
+  scatter3(solvedGlobalPosition_absH(:,1),solvedGlobalPosition_absH(:,2),solvedGlobalPosition_absH(:,3),4,'blue')
 
 %% Reconstruct for single Tx/Rx and all Rx/Tx; find position of scatters; cycle
 %  through all and adjust positions
 figure(30)
 clf
-solved_panel_position=Exp_data.panelPosition;
-target_pos=zeros(12,3,num_points);
+results=struct([]);
+% solved_panel_position=Exp_data.panelPosition;
 spottedPosition=zeros(12,3,num_points);
 panelsPrimed=panels;
-track(:,1)=small_imgDomain.';   
-%%%%%
 
-% for i=1:1
-%     for j=1:6
-%         panelsPrimed(j,i)=panel_offset(...
-%             panelsPrimed(j,i),...
-%             .05,...
-%             .05,...
-%             .05 ...
-%             );
+
+for i=1:2
+    for j=1:6
+        panelsPrimed(j,i)=panel_offset(...
+            panelsPrimed(j,i),...
+            .05,...
+            .05,...
+            .05 ...
+            );
 %          shiftedPanels(j,i)=panel_rotate(...
 %             shiftedPanels(j,i),...
 %             rotation(i,1),...
@@ -499,13 +499,12 @@ track(:,1)=small_imgDomain.';
 %              locate(shiftedPanels(1,i)));
 % %         panel_plot(figure(22),shift_panels_test(j,i));
 % %         drawnow
-%     end
-% end
+    end
+end
 
 MSE_start=sum(sum((PerceivedPanelLocations-panelLocations).^2,2),1)/length(panelLocations);
 MSE_solved=[];
-interpAt=[NaN,.005,.005,.005,.005,.005,.005,.005,.005];
-for iterate=1:5%3
+for iterate=1:10%3
     for i_panel=1:2%12
         fprintf('panel %i\n',i_panel)
         %select panels
@@ -514,54 +513,72 @@ for iterate=1:5%3
         chooseSubpanels=cat(1,choosePanels,choosePanels,choosePanels,choosePanels,choosePanels,choosePanels);
         chooseSubpanels=chooseSubpanels(:); %choosing one panel (six feeds at time)
         for j_region=1:num_points
-            [f_mf, subIndices, timing] = reconstructionSelectPanels(sysConfig,...
+            [f_mf, subIndices{j_region},subImgDomain{j_region}, timing] = reconstructionSelectPanels(sysConfig,...
                 g,... Exp_data.g,...
-                small_imgDomain{j_region},...
+                subImgDomain{j_region},...
                 probes, probeTables,chooseProbes,...
                 panelsPrimed, panelTables(chooseSubpanels),choosePanels,...
                 partitioning,...
-                R_k...
-                );
-            %% find best guess at target position
+                R_k,...
+                'Reconstruction','Direct','inputIndices',subIndices{j_region});
+%             subIndices{j_region}
+            % find best guess at target position
            % subplot(num_points,sysConfig.nPanels,i_panel+sysConfig.nPanels*(j_region-1))
-            [f_plot, spottedPosition(i_panel,:,j_region)] = filterScatters(f_mf,...
-                                                            subIndices,...
+            [spottedPosition(i_panel,:,j_region), ~] = filterScatterers(f_mf,...
+                                                            subIndices{j_region},... subIndices,...
                                                             imgDomain,...
                                                             domainGrid,...
-                                                            R_l,15,...
-                                                            interpAt(iterate));
-            
-            %plot
-%             hf = vol3d('cdata',  f_plot,...
-%                 'XData', [min(imgDomain(:,1)), max(imgDomain(:,1))],...
-%                 'YData', [min(imgDomain(:,2)), max(imgDomain(:,2))],...
-%                 'ZData', [min(imgDomain(:,3)), max(imgDomain(:,3))]...
-%                 );
-%             view(3);
-%             axis image;
-%             view(-65,18);
-%             xlim([min(imgDomain(subIndices,1)) max(imgDomain(subIndices,1))])
-%             ylim([min(imgDomain(subIndices,2)) max(imgDomain(subIndices,2))])
-%             zlim([min(imgDomain(subIndices,3)) max(imgDomain(subIndices,3))])
-%             set(gca, 'XTickLabel',[])
-%             set(gca, 'YTickLabel',[])
-%             set(gca, 'ZTickLabel',[])
-            %         drawnow
-            %         [max_value,index_max]=max(f_plot(:));
-            %         target_pos(i_panel,:,j_region)=imgDomain(index_max,:);
-            %        if  norm(target_pos(i_panel,:,j_region)-absolutePosition(j_region,:))>lookWithinRadius
-            %         %pause
-            %         target_pos(i_panel,:,j_region)=NaN;
-            %        end
-          
-        end
-    end
-        %check that the spotted position is in the expected range or set to NaN
+                                                            15, ...
+                                                            1, ...
+                                                            lookWithinRadius ...
+                                                            );                                                    
+        figure(30)
+        cla
+        hold on
+              scatter3(spottedPosition(i_panel,1,j_region),...
+                    spottedPosition(i_panel,2,j_region),...
+                    spottedPosition(i_panel,3,j_region),...
+                    30,'green')
+
+                  scatter3(solvedGlobalPosition(j_region,1),...
+                    solvedGlobalPosition(j_region,2),...
+                    solvedGlobalPosition(j_region,3),...
+                    30,'red')
+                    smallReconstructionRegionPlot(figure(30),...
+                        solvedGlobalPosition(j_region,:),...
+                        lookWithinRadius,num2str(j_region))
+                    plotScatters(f_mf,subIndices{j_region}, ...
+                        imgDomain, domainGrid, 'Type','log');
+                    
+       xlim([min(imgDomain(subIndices{j_region},1)),max(imgDomain(subIndices{j_region},1))]);
+       ylim([min(imgDomain(subIndices{j_region},2)),max(imgDomain(subIndices{j_region},2))]);
+       zlim([min(imgDomain(subIndices{j_region},3)),max(imgDomain(subIndices{j_region},3))]);
+
+            axis equal
+                  drawnow
+%                     scatter3(imgDomain(subIndices{j_region},1),...
+%                         imgDomain(subIndices{j_region},2),...
+%                         imgDomain(subIndices{j_region},3),3,'green')
+%                     scatter3(subLocs(:,1),subLocs(:,2),subLocs(:,3),3,'blue')
+%                      figure(28)
+%   
+%         [f_plot] = plotScatters(f_mf,subIndices, imgDomain, domainGrid, 'Type','log');
+%         hold on
+%         scatter3(spottedPosition(i_panel,1,j_region),...
+%                     spottedPosition(i_panel,2,j_region),...
+%                     spottedPosition(i_panel,3,j_region),...
+%                     30,'green')
+        smallReconstructionRegionPlot(figure(29), solvedGlobalPosition(j_region,:),lookWithinRadius,num2str(j_region))
+
+            %check that the spotted position is in the expected range or set to NaN
         if  norm(spottedPosition(i_panel,:,j_region)-solvedGlobalPosition(j_region,:))>lookWithinRadius
             %pause
             recordAllSpottedPosition(i_panel,:,j_region)=spottedPosition(i_panel,:,j_region) %
             spottedPosition(i_panel,:,j_region)=NaN;
         end
+        end
+    end
+    
     
     spottedPosition
     
@@ -588,14 +605,14 @@ for iterate=1:5%3
         fprintf('for Point %i ..., \nX variance is: %.5f\nY variance is: %.3f\nZ variance is: %.3f\n'...
             ,i, x_std, y_std,z_std)
     end
-    scatter3(scattererIndex(:,1),scattererIndex(:,2),scattererIndex(:,3),4,'r')
+    scatter3(spottedPosition(:,1),spottedPosition(:,2),spottedPosition(:,3),4,'r') %!!!!!
     %% Calculate shift of panels and move ======================================
     %determine guess for how panels should be moved to improve image
     
     K_U=[];
     K_r=[];
     lrms=[];
-       
+     
     pts_global_exist=logical(all(~isnan(solvedGlobalPosition(:,1)),2)); 
     for i=1:sysConfig.nPanels
         %remove NaN valued points
@@ -606,42 +623,43 @@ for iterate=1:5%3
             permute(spottedPosition(i,:,use_pts),[3 2 1]).',...
             solvedGlobalPosition(use_pts,:).'...
             );
-    end
-
-    % move copy of panels (move_panels) to new positions
-    
-    %check to see that nothing is too far out of bounds, throw out if so.
-    
-    K_r_EDITED=K_r;
-    Kabsch_U_EDITED=K_U;
-    for i=1:sysConfig.nPanels
-        if (norm(K_r(:,i))> .1) | (trace(K_U(:,:,i))<2.5)
-            K_r_EDITED(:,i)=0;
+        
+          %check to see that nothing is too far out of bounds, and throw it out if it's s
+       if (norm(K_r(:,i))> .05) | (trace(K_U(:,:,i))<2.5)
+         K_r(:,i)=0;
             fprintf('movement out of bounds for panel %i, set to zero\n',i)
-            Kabsch_U_EDITED(:,:,i)=eye(3);
+            K_U(:,:,i)=eye(3);
             fprintf('rotation out of bounds for panel %i, set to identity\n',i)
         end
     end
-    
+ results(iterate).K_U=K_U;
+ results(iterate).K_r=K_r;
+    % move copy of panels (move_panels) to new positions
+   
     %move panels
     for i=1:sysConfig.nPanels
         for j=1:sysConfig.nFeeds
-            panelsPrimed(j,i)=transformPanelArbitraryUr(panelsPrimed(j,i),Kabsch_U_EDITED(:,:,i),K_r_EDITED(:,i));
+            panelsPrimed(j,i)=transformPanelArbitraryUr(panelsPrimed(j,i),K_U(:,:,i),K_r(:,i));
         end
     end
     solvedPanelLocations=locate(panelsPrimed(1,:))
     %plot MSE
     disp('MSE (position only)')
-    MSE_solved(iterate)=sum(sum((solvedPanelLocations-panelLocations).^2,2),1)/length(panelLocations)
-figure(26)
-plot(MSE_solved)
+    results(iterate).MSE_solved=sum(sum((solvedPanelLocations-panelLocations).^2,2),1)/length(panelLocations)
+    figure(26)
+    plot(results(:).MSE_solved)
+    title('MSE Vs. Iteration (Position Only)')
+    xlabel('Iteration')
+    ylabel('MSE')
+
 figure(29)
 subplot(2,1,2)
 hold on
      scatter3(panelLocations(:,1),panelLocations(:,2),panelLocations(:,3),4,'black')
      scatter3(solvedPanelLocations(:,1),solvedPanelLocations(:,2),solvedPanelLocations(:,3),4,'red')
      scatter3(PerceivedPanelLocations(:,1),PerceivedPanelLocations(:,2),PerceivedPanelLocations(:,3),4,'blue')
-%     panel_plot(figure(11),panelsPrimed);
+axis equal;
+     %     panel_plot(figure(11),panelsPrimed);
 %     axis equal
 %     drawnow
 %     hold on
@@ -665,53 +683,35 @@ hold on
     partitioning.large_k        =extract_subs(partitioning.scene_cfg0.locs_kl(1,:));
     fprintf('finished in %0.2f seconds\n', etime(clock(),mark));
     
-    [f_mf, Indices, timing] = reconstructionSelectPanels(sysConfig,...
+    [f_mf, Indices, locs, timing] = reconstructionSelectPanels(sysConfig,...
         g,... Exp_data.g,...
         imgDomain,...
         probes, probeTables,chooseProbes,...
         panelsPrimed, panelTables,choosePanels,...
         partitioning,...
-        R_k...
+        R_l...
         );
+     figure(35)
+     cla
+    [f_plot] = plotScatters(f_mf,indices,imgDomain, domainGrid, 'Type','linear');
     
-    [f_plot] = filterScatters(f_mf,indices,imgDomain, domainGrid, R_l,15,NaN);
- 
-    figure(35)
-    cla
-     hf = vol3d('cdata',  f_plot,...
-                'XData', [min(imgDomain(:,1)), max(imgDomain(:,1))],...
-                'YData', [min(imgDomain(:,2)), max(imgDomain(:,2))],...
-                'ZData', [min(imgDomain(:,3)), max(imgDomain(:,3))]...
-                );
-            view(3);
-            axis image;
-            view(-65,18);
      hold on
-    scatter3(scattererIndex(:,1),scattererIndex(:,2),scattererIndex(:,3),4,'r')
+   % scatter3(scattererIndex(:,1),scattererIndex(:,2),scattererIndex(:,3),4,'r')
     drawnow
     
     %% Locate scatters & calculate reduced region to reconstruct over
     f_plot_dummy=f_plot;
  
 solvedGlobalPosition=zeros(num_points,3);
-for i=1:num_points
-     [max_value(i),index_max(i)]=max(f_plot_dummy(:));
 
-%       solvedGlobalPosition(i,:)=imgDomain(index_max(i),:);
-    hold on;
-
-    %find distance
-    pt_distance=sum(bsxfun(@minus,imgDomain,imgDomain(index_max(i),:)).^2,2).^(1/2);
-    %values for f of small region (log)
-    f_smallImgDomain{i}=f_plot_dummy(pt_distance<lookWithinRadius);
-    f_plot_dummy(pt_distance<lookWithinRadius)=-inf;
-    small_imgDomain{i}=imgDomain(pt_distance<lookWithinRadius,:);
-
-     %solve for max position using centroid
-      x_centroid=sum(small_imgDomain{i}(:,1).*abs(f_smallImgDomain{i}).^2)/sum(abs(f_smallImgDomain{i}).^2);
-      y_centroid=sum(small_imgDomain{i}(:,2).*abs(f_smallImgDomain{i}).^2)/sum(abs(f_smallImgDomain{i}).^2);
-      z_centroid=sum(small_imgDomain{i}(:,3).*abs(f_smallImgDomain{i}).^2)/sum(abs(f_smallImgDomain{i}).^2);
-      solvedGlobalPosition(i,:)=[x_centroid,y_centroid,z_centroid];
-end
- scatter3(solvedGlobalPosition(:,1),solvedGlobalPosition(:,2),solvedGlobalPosition(:,3),4,'black')
+[solvedGlobalPosition, subImgDomain, subIndices] = filterScatterers(f_mf,...
+                                        indices,...
+                                        imgDomain,...
+                                        domainGrid,...
+                                        15, ...
+                                        num_points,...
+                                        lookWithinRadius ...
+                                        );
+figure(29)
+ scatter3(solvedGlobalPosition(:,1),solvedGlobalPosition(:,2),solvedGlobalPosition(:,3),10,'black')
 end
