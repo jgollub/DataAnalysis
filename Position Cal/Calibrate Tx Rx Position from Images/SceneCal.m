@@ -310,7 +310,7 @@ height=Exp_data.extent(3,2)-Exp_data.extent(3,1);
 %Resolutions Sampling Values for panel
   dR_panel     = 0.2; % meters
   dAz_panel    = 0.03; %radians
-  dEl_panel    = 0.035; %radians
+  dEl_panel    = 0.025; %radians
    NFS_distance = 0.086; %meters
 
 panelTableRes = [dR_panel, dAz_panel, dEl_panel]; %Radial/ Azimuth/ Elevation 
@@ -477,7 +477,10 @@ hold on
 %  through all and adjust positions
 figure(30)
 clf
+
+
 results=struct([]);
+
 % solved_panel_position=Exp_data.panelPosition;
 spottedPosition=zeros(12,3,num_points);
 panelsPrimed=panels;
@@ -487,9 +490,9 @@ for i=1:2
     for j=1:6
         panelsPrimed(j,i)=panel_offset(...
             panelsPrimed(j,i),...
-            .05,...
-            .05,...
-            .05 ...
+            .03,...
+            .03,...
+            .03 ...
             );
 %          shiftedPanels(j,i)=panel_rotate(...
 %             shiftedPanels(j,i),...
@@ -513,8 +516,27 @@ for iterate=1:10%3
         chooseSubpanels=cat(1,choosePanels,choosePanels,choosePanels,choosePanels,choosePanels,choosePanels);
         chooseSubpanels=chooseSubpanels(:); %choosing one panel (six feeds at time)
         for j_region=1:num_points
+ 
+p=ones(10,1);
+p(j_region)=0;
+p=logical(p);
+clear dummy
+dummy(:,:,1)= scattererPositions(sortIndex(p),:);
+dummy(:,:,2)= bsxfun(@plus,dummy(:,:,1),[R_l, R_l,R_l]);
+imgDomain_virtualizer(1:2:2*(numScatterers-1),:)=dummy(:,:,1);
+imgDomain_virtualizer(2:2:2*(numScatterers-1),:)=dummy(:,:,2);
+imgDomain_sigma=zeros(length(imgDomain_virtualizer),1);
+imgDomain_sigma(1:2:2*numScatterers)=1;
+
+t=ones(12,1);
+t(i_panel)=0;
+t=logical(t);
+g_subtract=forward_model(probes, shiftedPanels(:), imgDomain_sigma, imgDomain_virtualizer);
+g_subtract=permute(g_subtract,[3 2 1]);
+gprime=g-g_subtract(:);
+
             [f_mf, subIndices{j_region},subImgDomain{j_region}, timing] = reconstructionSelectPanels(sysConfig,...
-                g,... Exp_data.g,...
+                gprime,... g,... Exp_data.g,...
                 subImgDomain{j_region},...
                 probes, probeTables,chooseProbes,...
                 panelsPrimed, panelTables(chooseSubpanels),choosePanels,...
@@ -549,6 +571,8 @@ for iterate=1:10%3
                         lookWithinRadius,num2str(j_region))
                     plotScatters(f_mf,subIndices{j_region}, ...
                         imgDomain, domainGrid, 'Type','log');
+                    
+                scatter3(scattererPositions(:,1),scattererPositions(:,2),scattererPositions(:,3),4,'k')
                     
        xlim([min(imgDomain(subIndices{j_region},1)),max(imgDomain(subIndices{j_region},1))]);
        ylim([min(imgDomain(subIndices{j_region},2)),max(imgDomain(subIndices{j_region},2))]);
@@ -625,7 +649,7 @@ for iterate=1:10%3
             );
         
           %check to see that nothing is too far out of bounds, and throw it out if it's s
-       if (norm(K_r(:,i))> .05) | (trace(K_U(:,:,i))<2.5)
+       if (norm(K_r(:,i))> .06) | (trace(K_U(:,:,i))<2.5)
          K_r(:,i)=0;
             fprintf('movement out of bounds for panel %i, set to zero\n',i)
             K_U(:,:,i)=eye(3);
