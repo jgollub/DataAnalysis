@@ -1,4 +1,4 @@
-function [f_plot] = plotScatters(f_raw, indices,imgDomain, domainGrid, varargin)
+function [f_plot] = volume_plot3(f_raw, indices,imgDomain, domainGrid, varargin)
 parser=inputParser;
 
 defaultType='linear';
