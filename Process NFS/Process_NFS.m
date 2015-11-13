@@ -1,29 +1,33 @@
-% clear all
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Near Field Scan Data Processing                                          %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Set Processing Parameters Parameters
+%debug plotting?
 debug_on=1;
-%% Near Field Scan Data Processing
 
-
-%set the frequencies you want to use in your final imaging system
+%Output frequencies
 f_num=101;
 f=linspace(18e9,26.5e9,f_num);
 
-%set number of polarizations here
+%Number of polarizations
 numPol=1;
 
-c=3e8;
-%input folder with NFS data
-% Raw_Data_Folder='D:\Dropbox (Duke Electric & Comp)\WPT\Printed Cavity\Measurements\Near-Field Scans\6 TX & 6 RX panel configuration';
+%constants
+c=299792458;    % [m/s] Speed of light
+
+%Folder containing NFS data
 Raw_Data_Folder='C:\Users\lab\Documents\MidImager_Data\NFS_data';
 files=dir([Raw_Data_Folder,'\*.csv']);
 
 %% clean NFS  data (.CSV files) by removing spaces/comments/etc 
-mkdir([Raw_Data_Folder,'\CLEANED_CSV_FILES']);
-mkdir([Raw_Data_Folder,'\CLEANED_CSV_FILES\CAL\']);
+mkdir([Raw_Data_Folder,'\CLEANED_CSV']);
+mkdir([Raw_Data_Folder,'\CLEANED_CSV\CAL\']);
 
 F_NSI_last=[];
 for i=1:length(files)
     file_in=[Raw_Data_Folder,'\',files(i).name];
-    file_out=[Raw_Data_Folder,'\CLEANED_CSV_FILES\CLEANED_',files(i).name];
+    file_out=[Raw_Data_Folder,'\CLEANED_CSV\CLEANED_',files(i).name];
     f_NSI=cleanData(file_in,file_out);
     if F_NSI_last~=F_NSI_last
     error('Near field scans do not have the same parameters')
@@ -32,17 +36,24 @@ for i=1:length(files)
     fprintf(['FINISHED CSV CLEAN FOR PANEL: ', files(i).name,'\n'])
 end
 
-save([Raw_Data_Folder,'\CLEANED_CSV_FILES\CAL\NSI_Scanned_Frequencies.mat'],'f_NSI');
+save([Raw_Data_Folder,'\CLEANED_CSV\CAL\NSI_FREQS.mat'],'f_NSI');
 
 %% Probe phase response (NSI system specific)
 debug_on=1;
 
-% load([Raw_Data_Folder,'\CLEANED_CSV_FILES\CAL\NSI_Scanned_Frequencies.mat'])
-use_case=2;
+
+if ~exist('f_NSI')
+load([Raw_Data_Folder,'\CLEANED_CSV\CAL\NSI_FREQS.mat'])
+disp('WARNING:using loaded f_NSI data')
+end
+
+%choose probe correction
+use_case=3;
+
 NSI_probe_response=probePhase(f,use_case);
 
-% check phase vs analytic
 if debug_on
+% check phase vs analytic
 % probe length
 p_length=7.5*2.54/100;
 a=0.010668;
@@ -53,37 +64,31 @@ NSI_probe_response_analytic=exp(-1.0j*k_probe*p_length);
 debug_probe=figure(1);
 subplot(2,1,1);
 plot(f,NSI_probe_response,f,NSI_probe_response_analytic,'--r');
-xlabel('frequency');
-ylabel('amplitude');
-legend('measured','analytic')
+xlabel('frequency'); ylabel('amplitude'); legend('measured','analytic');
+
 subplot(2,1,2)
 plot(f,phase(NSI_probe_response),f,phase(NSI_probe_response_analytic),'--r');
-%plot(f,-phase(NSI_probe_response),f,mod(phase(NSI_probe_response_analytic),pi),'--r');
-
-xlabel('frequency');
-ylabel('phase');
-legend('measured','analytic');
+xlabel('frequency'); ylabel('phase'); legend('measured','analytic');
 end
 
 %% NSI cable phase response (taken from 4 pt measurement)
 debug_on=1;
-file='C:\Users\lab\Documents\MidImager_Data\NFS_data\cable.csv';
-%file='C:\Users\MetaImagerDuo\Desktop\New folder\cable_response_101_new.csv';
-% file='cable_response_with_probe.csv'
+ file='C:\Users\lab\Documents\MidImager_Data\NFS_data\NSI_CABLE_MEASURED\cable_101_new.csv';
+%file='C:\Users\lab\Documents\MidImager_Data\NFS_data\NSI_CABLE_MEASURED\cable.csv';
+
 [directory,name,ext]=fileparts(file);
 file_in=[directory,'\',name,ext];
-file_out=[Raw_Data_Folder,'\CLEANED_CSV_FILES\CAL\CLEANED_',name,ext];
-%clean raw csv file
+file_out=[Raw_Data_Folder,'\CLEANED_CSV\CAL\CLEANED_',name,ext];
+%clean raw csv file and load
 f_cables=cleanData(file_in,file_out);
-%load cleaned data
 NSI_cable_measurement=load(file_out);
 
-%Collect appropriate phase info for cables
+%Collect appropriate phase info for cables [assuming measuring 2x2 pts]
 NSI_cables_response=10.^(NSI_cable_measurement(1:4:numel(f_cables)*4,4)/20).*exp(1.0j*NSI_cable_measurement(1:4:numel(f_cables)*4,5)*pi/180);  
 
-%take desired frequency values
-[NSI_cable_logic,f_cable_position]=ismember(f,f_cables);
-if ~all(NSI_cable_logic)
+%choose and extract desired frequency values
+[test,f_cable_position]=ismember(f,f_cables);
+if ~all(test)
    error('frequency mismatch between available cable frequencies and requested frequencies')
 end
 NSI_cables_response=NSI_cables_response(f_cable_position,:);
@@ -91,69 +96,49 @@ NSI_cables_response=NSI_cables_response(f_cable_position,:);
 if debug_on
    % probe length %note due to the large length of the cable, phase
    % unwrapping is likely to be inconclusive
-   cable_length=47*12*2.54/100; %47ft of cable (rx 20ft + tx 27ft)
-   n_indx=sqrt(2.1);
-   f_extra=linspace(f(1),f(end),8/.005);
-   k_cable=(n_indx*2*pi*f_extra/c);
+   cable_length=((20+15+6+6+(15+5)/12)*12*2.54)/100; %47ft of cable (rx 20ft + tx 15ft+6ft +6ft +15in 5in(connectors))
+ 
+   n_indx=1/(.83);
+   k_cable=(n_indx*2*pi*f/c);
    NSI_cable_response_analytic=exp(-1.0j*k_cable*cable_length);
-
-   figure(2);
+   figure(2); hold on;
    title('Cable Response')
    subplot(2,1,1);
-   plot(f/1e9, real(NSI_cables_response),'k',f_extra/1e9,real(NSI_cable_response_analytic),'--r')
+   plot(f/1e9, real(NSI_cables_response/max(abs(NSI_cables_response))),'k',f/1e9,real(NSI_cable_response_analytic),'--r')
    xlabel('Frequency (GHz)');
    ylabel('real value');
    subplot(2,1,2);
-   plot(f/1e9,phase(NSI_cables_response),f_extra/1e9,phase(NSI_cable_response_analytic),'--r');
+   plot(f/1e9,phase(NSI_cables_response),f/1e9,phase(NSI_cable_response_analytic),'--r');
    xlabel('Frequency (GHz)')
    ylabel('phase (rad)')
-   
-   
 end
 
 %% conector phase 
-
-%lucky for you, the connectors cancel out do not need to be calibrated out
-%if the same through cal is used for both the NSI cable measurement and the
-%system cable measurements.... this will not always be true!!!!!!!
-
-    % Remove calkit
-    c=299792458;    % [m/s] Speed of light
-    dt=115.881e-12; % [s] Per calkit specsheet
-    dx=c*dt;        % [m] Calkit pathlength
-    connector=exp(-1.0j * dx * 2*pi*f/c);
+% Remove calkit
+dt=115.881e-12; % [s] Per calkit specsheet
+dx=c*dt;        % [m] Calkit pathlength
+connector=exp(-1.0j * dx * 2*pi*f/c);
     
-    if debug_on
-% probe length
-
-
+if debug_on
 debug_connector=figure(3);
 subplot(2,1,1);
 plot(f,real(connector).','--r');
-xlabel('frequency');
-ylabel('amplitude');
-% legend('datasheet','analytic')
-subplot(2,1,2)
-% plot(f,phase(NSI_probe_response),f,phase(NSI_probe_response_analytic),'--r');
-%plot(f,-phase(NSI_probe_response),f,mod(phase(NSI_probe_response_analytic),pi),'--r');
-
-% xlabel('frequency');
-% ylabel('phase');
-% legend('measured','analytic');
+xlabel('frequency'); ylabel('amplitude'); legend('datasheet');
 end
 
 %% Process NSI files; remove excess phase; save as .MAT files
-mkdir([Raw_Data_Folder,'\PANEL_FILES_UNALTERED\']);
-files=dir([Raw_Data_Folder,'\CLEANED_CSV_FILES\*.CSV']);
+mkdir([Raw_Data_Folder,'\PANEL_FILES_RAW\']);
+files=dir([Raw_Data_Folder,'\CLEANED_CSV\*.CSV']);
 
 %make sure to set number of polarizations
 
 for i=1:length(files)
-    file_in=[Raw_Data_Folder,'\CLEANED_CSV_FILES\',files(i).name];
-    file_out=[Raw_Data_Folder,'\PANEL_FILES_UNALTERED\',files(i).name(9:end-4),'.mat'];
+    file_in=[Raw_Data_Folder,'\CLEANED_CSV\',files(i).name];
+    file_out=[Raw_Data_Folder,'\PANEL_FILES_RAW\',files(i).name(9:end-4),'.mat'];
+    
     %Process each panel and remove excess phase (6+ entries in function)   
     NSI2Panel(file_out,file_in,f_NSI,f,numPol,NSI_probe_response,NSI_cables_response,connector);
-%      NSI2Panel(file_out,file_in,f_NSI,f,2,NSI_cables_response);
+    %NSI2Panel(file_out,file_in,f_NSI,f,2,NSI_cables_response);
     fprintf(['FINISHED FILE: ',files(i).name(9:end-4),'.mat \n']);
 end
 
@@ -166,9 +151,9 @@ p_rb=cell(2,1);
 ey=cell(2,1); 
 clear Rx Tx X Y measurements f
 mkdir(Raw_Data_Folder,'\PANEL_FILES_ALIGNED\')
-files=dir([Raw_Data_Folder,'\PANEL_FILES_UNALTERED\*.MAT']);
+files=dir([Raw_Data_Folder,'\PANEL_FILES_RAW\*.MAT']);
 for i=1:length(files)
-    file_in=[Raw_Data_Folder,'\PANEL_FILES_UNALTERED\',files(i).name];
+    file_in=[Raw_Data_Folder,'\PANEL_FILES_RAW\',files(i).name];
     load(file_in);  %% Load the near-field scan
 
 sampdist=(abs(X(1,1)-X(1,2)))/1000; %NFS sampling period

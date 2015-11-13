@@ -63,7 +63,7 @@ for en=find(choosePanels)
     importedPanel = import_panel(NFS_data.data);
 
         %rotation
-     importedPanel=panel_rotate(...
+     importedPanel=panel_rotate(...p
         importedPanel,...
         Exp_data.panelRotation(en,1),...
         Exp_data.panelRotation(en,2),...
@@ -210,7 +210,8 @@ height=Exp_data.extent(3,2)-Exp_data.extent(3,1);
 
 %shift panels randomly to test algorithm [1 cm std]
 rng(2);
-shift=0*randn(sysConfig.nPanels,3); 
+% shift=0*randn(sysConfig.nPanels,3); 
+shift=0.02*ones(sysConfig.nPanels,3); 
 rng(2);
 rotation=0*pi/180*randn(sysConfig.nPanels,3); 
 shiftedPanels=panels;
@@ -486,14 +487,14 @@ spottedPosition=zeros(12,3,num_points);
 panelsPrimed=panels;
 
 
-for i=1:2
-    for j=1:6
-        panelsPrimed(j,i)=panel_offset(...
-            panelsPrimed(j,i),...
-            .03,...
-            .03,...
-            .03 ...
-            );
+% for i=1:2
+%     for j=1:6
+%         panelsPrimed(j,i)=panel_offset(...
+%             panelsPrimed(j,i),...
+%             .03,...
+%             .03,...
+%             .03 ...
+%             );
 %          shiftedPanels(j,i)=panel_rotate(...
 %             shiftedPanels(j,i),...
 %             rotation(i,1),...
@@ -502,12 +503,14 @@ for i=1:2
 %              locate(shiftedPanels(1,i)));
 % %         panel_plot(figure(22),shift_panels_test(j,i));
 % %         drawnow
-    end
-end
+%     end
+% end
 
 MSE_start=sum(sum((PerceivedPanelLocations-panelLocations).^2,2),1)/length(panelLocations);
 MSE_solved=[];
 for iterate=1:10%3
+    
+    Mean_error(iterate,:)= mean(abs(locate(panelsPrimed(1,:))-locate(shiftedPanels(1,:))));
     for i_panel=1:2%12
         fprintf('panel %i\n',i_panel)
         %select panels
@@ -517,26 +520,26 @@ for iterate=1:10%3
         chooseSubpanels=chooseSubpanels(:); %choosing one panel (six feeds at time)
         for j_region=1:num_points
  
-p=ones(10,1);
-p(j_region)=0;
-p=logical(p);
-clear dummy
-dummy(:,:,1)= scattererPositions(sortIndex(p),:);
-dummy(:,:,2)= bsxfun(@plus,dummy(:,:,1),[R_l, R_l,R_l]);
-imgDomain_virtualizer(1:2:2*(numScatterers-1),:)=dummy(:,:,1);
-imgDomain_virtualizer(2:2:2*(numScatterers-1),:)=dummy(:,:,2);
-imgDomain_sigma=zeros(length(imgDomain_virtualizer),1);
-imgDomain_sigma(1:2:2*numScatterers)=1;
-
-t=ones(12,1);
-t(i_panel)=0;
-t=logical(t);
-g_subtract=forward_model(probes, shiftedPanels(:), imgDomain_sigma, imgDomain_virtualizer);
-g_subtract=permute(g_subtract,[3 2 1]);
-gprime=g-g_subtract(:);
+% p=ones(10,1);
+% p(j_region)=0;
+% p=logical(p);
+% clear dummy
+% dummy(:,:,1)= scattererPositions(sortIndex(p),:);
+% dummy(:,:,2)= bsxfun(@plus,dummy(:,:,1),[R_l, R_l,R_l]);
+% imgDomain_virtualizer(1:2:2*(numScatterers-1),:)=dummy(:,:,1);
+% imgDomain_virtualizer(2:2:2*(numScatterers-1),:)=dummy(:,:,2);
+% imgDomain_sigma=zeros(length(imgDomain_virtualizer),1);
+% imgDomain_sigma(1:2:2*numScatterers)=1;
+% 
+% t=ones(12,1);
+% t(i_panel)=0;
+% t=logical(t);
+% g_subtract=forward_model(probes, shiftedPanels(:), imgDomain_sigma, imgDomain_virtualizer);
+% g_subtract=permute(g_subtract,[3 2 1]);
+% gprime=g-g_subtract(:);
 
             [f_mf, subIndices{j_region},subImgDomain{j_region}, timing] = reconstructionSelectPanels(sysConfig,...
-                gprime,... g,... Exp_data.g,...
+                g,... Exp_data.g,...
                 subImgDomain{j_region},...
                 probes, probeTables,chooseProbes,...
                 panelsPrimed, panelTables(chooseSubpanels),choosePanels,...
@@ -671,7 +674,7 @@ gprime=g-g_subtract(:);
     disp('MSE (position only)')
     results(iterate).MSE_solved=sum(sum((solvedPanelLocations-panelLocations).^2,2),1)/length(panelLocations)
     figure(26)
-    plot(results(:).MSE_solved)
+    plot(1:numel(results(:).MSE_solved),[results(:).MSE_solved])
     title('MSE Vs. Iteration (Position Only)')
     xlabel('Iteration')
     ylabel('MSE')
