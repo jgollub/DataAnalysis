@@ -1,0 +1,18 @@
+Near Field Scanning Processing Steps
+
+-Scan Setup
+--Mechanical Setup
+--Software setup
+
+-Data Processing
+--Data formatting (cleaning, translate to .mat file form)
+--correct phase (remove cable phase, probe phase, connector phase)
+--correlate NFS to physical panel position
+
+-cable calibration
+--connector correction
+--debug parameters (~rough cable distance)
+
+-multi-panel Debug
+--backpropagate fields (determine center, orientation) 
+--switching sequence
