@@ -56,16 +56,16 @@ if ~all(f_check)
     error('Input frequencies do not match up with NSI data frequencies')
 end
 
+%collect desired frequency pts
+measurements=measurements(:,:,f_location,:);
 
+%correct for each component (probe, connector, etc)
 for el=1:numel(phase_correction)
-    counter=0;
-    for ii=f_location
-        counter=counter+1;
-        measurements_out(:,:,counter,:)=measurements(:,:,ii,:)/(phase_correction{el}(counter));
+    for ii=1:numel(f)
+        measurements(:,:,ii,:)=measurements(:,:,ii,:)/(phase_correction{el}(ii));
     end
 end
 
-measurements=measurements_out; %reset to known variable name
 
 % PROBE CORRECTION
 %     for ii=1:Freq_points

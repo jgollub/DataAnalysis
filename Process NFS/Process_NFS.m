@@ -122,6 +122,25 @@ end
     dt=115.881e-12; % [s] Per calkit specsheet
     dx=c*dt;        % [m] Calkit pathlength
     connector=exp(-1.0j * dx * 2*pi*f/c);
+    
+    if debug_on
+% probe length
+
+
+debug_connector=figure(3);
+subplot(2,1,1);
+plot(f,real(connector).','--r');
+xlabel('frequency');
+ylabel('amplitude');
+% legend('datasheet','analytic')
+subplot(2,1,2)
+% plot(f,phase(NSI_probe_response),f,phase(NSI_probe_response_analytic),'--r');
+%plot(f,-phase(NSI_probe_response),f,mod(phase(NSI_probe_response_analytic),pi),'--r');
+
+% xlabel('frequency');
+% ylabel('phase');
+% legend('measured','analytic');
+end
 
 %% Process NSI files; remove excess phase; save as .MAT files
 mkdir([Raw_Data_Folder,'\PANEL_FILES_UNALTERED\']);
