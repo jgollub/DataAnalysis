@@ -38,7 +38,7 @@ save([Raw_Data_Folder,'\CLEANED_CSV_FILES\CAL\NSI_Scanned_Frequencies.mat'],'f_N
 debug_on=1;
 
 % load([Raw_Data_Folder,'\CLEANED_CSV_FILES\CAL\NSI_Scanned_Frequencies.mat'])
-use_case=3;
+use_case=2;
 NSI_probe_response=probePhase(f,use_case);
 
 % check phase vs analytic

@@ -36,7 +36,7 @@ switch use_case
         phase_correction=abs(measured).*sqrt(exp(-1.0j*angle(measured)));
         
     case 2
-        probe_Measurement_Path='D:\Dropbox (Duke Electric & Comp)\MetaImager Data\Near Field Scans\printed dipole\probephase.mat'; 
+        probe_Measurement_Path='C:\Users\lab\Documents\data\response\nsi\probephase.mat'; 
         load(probe_Measurement_Path)
         
         phase_correction=exp(1.0i*probe_phase_meas);
