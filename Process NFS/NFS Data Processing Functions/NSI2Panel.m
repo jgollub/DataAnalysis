@@ -11,6 +11,7 @@ phase_correction=varargin;
 % Load data
 csv=load(scanPath);
 
+
 xNum=numel(unique(csv(:,2)));
 yNum=numel(unique(csv(:,3)));
 freq_num=size(csv,1)/(xNum*yNum*polarizations);
@@ -65,7 +66,6 @@ for el=1:numel(phase_correction)
         measurements(:,:,ii,:)=measurements(:,:,ii,:)/(phase_correction{el}(ii));
     end
 end
-
 
 % PROBE CORRECTION
 %     for ii=1:Freq_points

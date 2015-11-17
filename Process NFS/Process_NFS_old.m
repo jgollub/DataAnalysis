@@ -11,13 +11,13 @@ f_num=101;
 f=linspace(18e9,26.5e9,f_num);
 
 %Number of polarizations
-numPol=2; %no check in code !!!!
+numPol=2;
 
 %constants
 c=299792458;    % [m/s] Speed of light
 
 %Folder containing NFS data
-Raw_Data_Folder='C:\Users\lab\Documents\MidImager_Data\NFS_data_3';
+Raw_Data_Folder='C:\Users\lab\Documents\MidImager_Data\NFS_data_5';
 files=dir([Raw_Data_Folder,'\*.csv']);
 
 %% clean NFS  data (.CSV files) by removing spaces/comments/etc 
@@ -50,6 +50,7 @@ end
 %choose probe correction
 use_case=3;
 
+
 NSI_probe_response=probePhase(f,use_case);
 
 if debug_on
@@ -63,7 +64,7 @@ NSI_probe_response_analytic=exp(-1.0j*k_probe*p_length);
 
 debug_probe=figure(1);
 subplot(2,1,1);
-plot(f,real(NSI_probe_response),f,real(NSI_probe_response_analytic),'--r');
+plot(f,NSI_probe_response,f,NSI_probe_response_analytic,'--r');
 xlabel('frequency'); ylabel('amplitude'); legend('measured','analytic');
 
 subplot(2,1,2)
@@ -73,8 +74,7 @@ end
 
 %% NSI cable phase response (taken from 4 pt measurement)
 debug_on=1;
-
-% file='C:\Users\lab\Documents\MidImager_Data\Horizontal\Cable_measurement\HORIZONTAL_Cable_response.csv';
+ %file='C:\Users\lab\Documents\MidImager_Data\NFS_OLD_PANELS\Probe_cal\cable_response_101.csv';
 file='C:\Users\lab\Documents\MidImager_Data\NFS_data\NSI_CABLE_MEASURED\cable.csv';
 
 [directory,name,ext]=fileparts(file);
@@ -89,23 +89,20 @@ NSI_cables_response=10.^(NSI_cable_measurement(1:4:numel(f_cables)*4,4)/20).*exp
 
 %choose and extract desired frequency values
 [test,f_cable_position]=ismember(f,f_cables);
-if ~all(test) && numel(sum(f_cable_position>0))~=numel(f)
+if ~all(test)
    error('frequency mismatch between available cable frequencies and requested frequencies')
 end
-NSI_cables_response=NSI_cables_response(f_cable_position);
+NSI_cables_response=NSI_cables_response(f_cable_position,:);
 
 if debug_on
    % probe length %note due to the large length of the cable, phase
    % unwrapping is likely to be inconclusive
-   fudge=26.1/12; %(for future reference)
-   
-   cable_length=((20+15+6+6+(15+5)/12+fudge)*12*2.54)/100; %47ft of cable (rx 20ft + tx 15ft+6ft +6ft +15in 5in(connectors))
+   cable_length=((20+15+6+6+(15+5)/12)*12*2.54)/100; %47ft of cable (rx 20ft + tx 15ft+6ft +6ft +15in 5in(connectors))
  
    n_indx=1/(.83);
    k_cable=(n_indx*2*pi*f/c);
-   
    NSI_cable_response_analytic=exp(-1.0j*k_cable*cable_length);
-   figure(2); clf;
+   figure(2); hold on;
    title('Cable Response')
    subplot(2,1,1);
    plot(f/1e9, real(NSI_cables_response/max(abs(NSI_cables_response))),'k',f/1e9,real(NSI_cable_response_analytic),'--r')
@@ -122,16 +119,13 @@ end
 dt=115.881e-12; % [s] Per calkit specsheet
 dx=c*dt;        % [m] Calkit pathlength
 connector=exp(-1.0j * dx * 2*pi*f/c);
-% connector=connector.';    
-
-
+    
 if debug_on
 debug_connector=figure(3);
 subplot(2,1,1);
 plot(f,real(connector).','--r');
 xlabel('frequency'); ylabel('amplitude'); legend('datasheet');
 end
-
 
 %% Process NSI files; remove excess phase; save as .MAT files
 mkdir([Raw_Data_Folder,'\PANEL_FILES_RAW\']);
@@ -140,58 +134,13 @@ files=dir([Raw_Data_Folder,'\CLEANED_CSV\*.CSV']);
 %make sure to set number of polarizations
 
 for i=1:length(files)
-    file_in=[Raw_Data_Folder,'\CLEANED_CSV\',files(i).name]
+    file_in=[Raw_Data_Folder,'\CLEANED_CSV\',files(i).name];
     file_out=[Raw_Data_Folder,'\PANEL_FILES_RAW\',files(i).name(9:end-4),'.mat'];
     
     %Process each panel and remove excess phase (6+ entries in function)   
     NSI2Panel(file_out,file_in,f_NSI,f,numPol,NSI_probe_response,NSI_cables_response,connector);
-
-    %NSI2Panel(file_out,file_in,f_NSI,f,2,NSI_cables_response);
-    fprintf(['FINISHED FILE: ',files(i).name(1:end-4),'.mat \n']);
-end
-
-
-if 1 %debug
-    mkdir([Raw_Data_Folder,'\DEBUG\']);
-    %plot efficiency at each step
-    for i=1
-        file_out=[Raw_Data_Folder,'\DEBUG\',files(i).name(9:end-4),'_1.mat'];
-        NSI2Panel(file_out,file_in,f_NSI,f,numPol,NSI_probe_response);
-        pe1_data=load(file_out);
-        pe1=squeeze(sum(sum(abs(pe1_data.measurements(:,:,:,1)).^2,1),2));
-        fprintf(['FINISHED FILE: ',files(i).name(1:end-4),'.mat \n']);
-                
-        file_out=[Raw_Data_Folder,'\DEBUG\',files(i).name(9:end-4),'_2.mat'];
-        NSI2Panel(file_out,file_in,f_NSI,f,numPol,NSI_cables_response);
-        pe2_data=load(file_out)
-        pe2=squeeze(sum(sum(abs(pe2_data.measurements(:,:,:,1)).^2,1),2));
-        fprintf(['FINISHED FILE: ',files(i).name(1:end-4),'.mat \n']);
-        
-        file_out=[Raw_Data_Folder,'\DEBUG\',files(i).name(9:end-4),'_3.mat'];
-        NSI2Panel(file_out,file_in,f_NSI,f,numPol,connector);
-        pe3_data=load(file_out)
-        pe3=squeeze(sum(sum(abs(pe3_data.measurements(:,:,:,1)).^2,1),2));
-        fprintf(['FINISHED FILE: ',files(i).name(1:end-4),'.mat \n']);
-        
-        file_out=[Raw_Data_Folder,'\PANEL_FILES_RAW\',files(i).name(9:end-4),'.mat'];
-        peAll_data=load(file_out)
-        peAll=squeeze(sum(sum(abs(peAll_data.measurements(:,:,:,1)).^2,1),2));
-        fprintf(['FINISHED FILE: ',files(i).name(1:end-4),'.mat \n']);
-    end
-   figure(106); clf; 
-   subplot(2,1,1);
-   plot(f,pe1,f,pe2,f,pe3,f,peAll);
-    legend('correction 1','correction 2', 'correction 3','all');
-    title('magnitude^2');
-
-   subplot(2,1,2);
-        ph1=squeeze(sum(sum(angle(pe1_data.measurements(:,:,:,1)),1),2));
-        ph2=squeeze(sum(sum(angle(pe2_data.measurements(:,:,:,1)),1),2));
-        ph3=squeeze(sum(sum(angle(pe3_data.measurements(:,:,:,1)),1),2));
-        phAll=squeeze(sum(sum(angle(peAll_data.measurements(:,:,:,1)),1),2));
-        plot(f,real(ph1),f,ph2,f,ph3,f, phAll);
-            legend('correction 1','correction 2', 'correction 3','All')
-            title('real part')
+   % NSI2Panel(file_out,file_in,f_NSI,f,2,NSI_probe_response, NSI_cables_response);
+    fprintf(['FINISHED FILE: ',files(i).name(9:end-4),'.mat \n']);
 end
 
 %% Apply NFS rotation to align with physical orientation
@@ -213,12 +162,13 @@ for loop=1:1:2
    
         figure(4); 
 %       range=[-0.0475, -0.0525]; %%back-propagation distance for plane 1 (in meters) - this one is physically measured for the scan
-        range=[-0.0595, -0.0645]; %%back-propagation distance for plane 1 (in meters) - this one is physically measured for the scan
+        range=[-0.0595, -0.0555];
+       % range=[-0.0595, -0.0645]; %%back-propagation distance for plane 1 (in meters) - this one is physically measured for the scan
            
-%          ey{loop}=bp(measurements(:,:,:,1),X,Y,range(loop)); %% ey is the summed up back-propagated field - all frequencies and all polarizations
+        ey{loop}=bp(measurements(:,:,:,1),X,Y,range(loop)); %% ey is the summed up back-propagated field - all frequencies and all polarizations
 %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!        
         %!!! use single polarization to find fiducials
-         ey{loop}=bp(measurements,X,Y,range(loop));
+        
         
         %yy=X/1000; 
         %zz=Y/1000;
@@ -411,8 +361,8 @@ fieldsPrimed=[];
 for frno=1:nf
 wavl=c/f(frno);
 fieldsPrimed(:,:,1)=transfield(measurements(:,:,frno,1),[0,0,range(2)/wavl], wavl/sampdist,wavl/sampdist); %!!! sign of range(2) is implied (-) may need change later
- fieldsPrimed(:,:,2)=transfield(measurements(:,:,frno,2),[0,0,range(2)/wavl], wavl/sampdist,wavl/sampdist);
- %fieldsPrimed(:,:,2)=0; %!!!!!!!!!!!!!!!!!! note should take in both polarizations
+% fieldsPrimed(:,:,2)=transfield(measurements(:,:,frno,2),[0,0,range(2)/wavl], wavl/sampdist,wavl/sampdist);
+fieldsPrimed(:,:,2)=0; %!!!!!!!!!!!!!!!!!! note should take in both polarizations
 fieldsPrimed(:,:,3)=0;
 
 fieldsPrimed=rotfield(fieldsPrimed,T,wavl/sampdist,wavl/sampdist);
@@ -495,9 +445,9 @@ magaddsq_final=zeros(ry,rx);
 for frno=1:nf
 wavl=c/f(frno);
 
-%%%!!!!!!!!
-fieldsPrimed(:,:,1)=transfield(new_measurements(:,:,frno,1), transvec/wavl, wavl/sampdist,wavl/sampdist); %!!! sign of range(2) is implied (-) may need change later
-fieldsPrimed(:,:,2)=transfield(new_measurements(:,:,frno,2), transvec/wavl, wavl/sampdist,wavl/sampdist);
+%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! CHANGED POLARIZATION
+fieldsPrimed(:,:,1)=transfield(new_measurements(:,:,frno,2), transvec/wavl, wavl/sampdist,wavl/sampdist); %!!! sign of range(2) is implied (-) may need change later
+fieldsPrimed(:,:,2)=transfield(new_measurements(:,:,frno,1), transvec/wavl, wavl/sampdist,wavl/sampdist);
 fieldsPrimed(:,:,3)=0;
 
 new_measurements(:,:,frno,1)=fieldsPrimed(:,:,1);
@@ -553,7 +503,7 @@ save([Raw_Data_Folder,'\PANEL_FILES_ALIGNED\',files(i).name], 'measurements', 'X
 end
 
 %% Optical Scanning and panel placement
-Optical_Scan='C:\Users\lab\Documents\MidImager_Data\NFS_data\CREAFORM MEASUREMENT\MidImager_Positions.txt';
+Optical_Scan='C:\Users\lab\Documents\MidImager_Data\Optical_Scanner\MidImager_Positions.txt';
 Optical_Data=dlmread(Optical_Scan,'\t',0,0);
 opt_fiducial = Optical_Data(Optical_Data(:,9)==0,1:3)/1000; %also convert m
 opt_fiducial_coded=Optical_Data(Optical_Data(:,9)>7,[1 2 3 9]); %any coded fiducial less than 7 is coord sys or bar 
@@ -582,7 +532,7 @@ lt_quadrant=fiducial_coord(fiducial_coord(:,1,i)<0 & fiducial_coord(:,2,i)>0, :,
 [~,n_indx]=min(sqrt(sum(lt_quadrant.^2,2)));
 lt_fiducial(i,:)=lt_quadrant(n_indx,:)+opt_fiducial_coded(i,1:3);
 
-    %upper right
+    %upper righ
 rt_quadrant=fiducial_coord(fiducial_coord(:,1,i)>0 & fiducial_coord(:,2,i)>0, :,i); 
 [~,n_indx]=min(sqrt(sum(rt_quadrant.^2,2)));
 rt_fiducial(i,:)=rt_quadrant(n_indx,:)+opt_fiducial_coded(i,1:3);
@@ -603,22 +553,22 @@ opt_d4=norm(rt_fiducial(i,:)-rb_fiducial(i,:));
 opt_d5=norm(lt_fiducial(i,:)-rb_fiducial(i,:));
 opt_d6=norm(rt_fiducial(i,:)-lb_fiducial(i,:));
 
-if (opt_d1<opt_d2) & ((opt_d3+opt_d4)/2 >(opt_d1+opt_d2)/2)
+if (opt_d1>opt_d2) & ((opt_d3+opt_d4)/2 >(opt_d1+opt_d2)/2)
     panel_type{i}='Rx';
-    v1(i,:)=(rb_fiducial(i,:)-lb_fiducial(i,:));
-    v2(i,:)=(lt_fiducial(i,:)-lb_fiducial(i,:));       
+    v1(i,:)=(rt_fiducial(i,:)-lt_fiducial(i,:));
+    v2(i,:)=(rt_fiducial(i,:)-rb_fiducial(i,:));       
     v3(i,:)=cross(v1(i,:),v2(i,:));
     
-    center_panel(i,:)=lb_fiducial(i,:)+v1(i,:)/2+v2(i,:)/2;
+    center_panel(i,:)=lt_fiducial(i,:)+v1(i,:)/2-v2(i,:)/2;
     
     v1(i,:)=v1(i,:)/norm(v1(i,:));
     v2(i,:)=v2(i,:)/norm(v2(i,:));
     v3(i,:)=v3(i,:)/norm(v3(i,:));
 
-elseif (opt_d3<opt_d4) & ((opt_d2+opt_d1)/2 >(opt_d3+opt_d4)/2)
+elseif (opt_d3>opt_d4) & ((opt_d2+opt_d1)/2 >(opt_d3+opt_d4)/2)
     panel_type{i}='Tx';
-    v1(i,:)=(rb_fiducial(i,:)-lb_fiducial(i,:));
-    v2(i,:)=(rt_fiducial(i,:)-rb_fiducial(i,:));
+    v1(i,:)=(rt_fiducial(i,:)-lt_fiducial(i,:));
+    v2(i,:)=(lt_fiducial(i,:)-lb_fiducial(i,:));
     v3(i,:)=cross(v1(i,:),v2(i,:)); 
     
     center_panel(i,:)=lb_fiducial(i,:)+v1(i,:)/2+v2(i,:)/2;
@@ -638,13 +588,11 @@ end
 
 hold on;
 for i=1:size(opt_fiducial_coded,1)
-        color=rand(1,3);
-    scatter3(lt_fiducial(i,1),lt_fiducial(i,2),lt_fiducial(i,3), 20,color,'filled');
-    scatter3(rt_fiducial(i,1),rt_fiducial(i,2),rt_fiducial(i,3), 20,color,'filled');
-    scatter3(lb_fiducial(i,1),lb_fiducial(i,2),lb_fiducial(i,3), 20,color,'filled');
-    scatter3(rb_fiducial(i,1),rb_fiducial(i,2),rb_fiducial(i,3), 20,color,'filled');
-    scatter3(center_panel(i,1),center_panel(i,2),center_panel(i,3), 20,color,'*');
-    axis tight, axis equal;
+    scatter3(lt_fiducial(i,1),lt_fiducial(i,2),lt_fiducial(i,3), 20,[1-i*1/12 0 i*1/12],'filled');
+    scatter3(rt_fiducial(i,1),rt_fiducial(i,2),rt_fiducial(i,3), 20,[1-i*1/12 0 i*1/12],'filled');
+    scatter3(lb_fiducial(i,1),lb_fiducial(i,2),lb_fiducial(i,3), 20,[1-i*1/12 0 i*1/12],'filled');
+    scatter3(rb_fiducial(i,1),rb_fiducial(i,2),rb_fiducial(i,3), 20,[1-i*1/12 0 i*1/12],'filled');
+    scatter3(center_panel(i,1),center_panel(i,2),center_panel(i,3), 20,[1-i*1/12 0 i*1/12],'*');
 end
 
 %set origin; choose panel here; build transform
@@ -687,15 +635,12 @@ end
 
 figure(11); clf;
 hold on
-rng(1)
 for i=1:size(opt_fiducial_coded,1)
-    color=rand(1,3);
-    scatter3(lt_fiducial_global(i,1),lt_fiducial_global(i,2),lt_fiducial_global(i,3), 20,color,'filled');
-    scatter3(rt_fiducial_global(i,1),rt_fiducial_global(i,2),rt_fiducial_global(i,3), 20,color,'filled');
-    scatter3(lb_fiducial_global(i,1),lb_fiducial_global(i,2),lb_fiducial_global(i,3), 20,color,'filled');
-    scatter3(rb_fiducial_global(i,1),rb_fiducial_global(i,2),rb_fiducial_global(i,3), 20,color,'filled');
-      scatter3(center_panel_global(i,1),center_panel_global(i,2),center_panel_global(i,3), 20,color,'*');
-     axis tight, axis equal;
+    scatter3(lt_fiducial_global(i,1),lt_fiducial_global(i,2),lt_fiducial_global(i,3), 20,[1-i*1/12 0 i*1/12],'filled');
+    scatter3(rt_fiducial_global(i,1),rt_fiducial_global(i,2),rt_fiducial_global(i,3), 20,[1-i*1/12 0 i*1/12],'filled');
+    scatter3(lb_fiducial_global(i,1),lb_fiducial_global(i,2),lb_fiducial_global(i,3), 20,[1-i*1/12 0 i*1/12],'filled');
+    scatter3(rb_fiducial_global(i,1),rb_fiducial_global(i,2),rb_fiducial_global(i,3), 20,[1-i*1/12 0 i*1/12],'filled');
+      scatter3(center_panel_global(i,1),center_panel_global(i,2),center_panel_global(i,3), 20,[1-i*1/12 0 i*1/12],'*');
 end
 
 %determine individual panel transformation
@@ -704,10 +649,10 @@ for i=1:size(opt_fiducial_coded,1)
 
     
     %Rx panel
-if (opt_d1<opt_d2) & ((opt_d3+opt_d4)/2 >(opt_d1+opt_d2)/2) 
+if (opt_d1>opt_d2) & ((opt_d3+opt_d4)/2 >(opt_d1+opt_d2)/2) 
     panel_type{i}='Rx';
-    v2(i,:)=(rb_fiducial_global(i,:)-lb_fiducial_global(i,:));
-    v3(i,:)=(lt_fiducial_global(i,:)-lb_fiducial_global(i,:));
+    v2(i,:)=(rt_fiducial_global(i,:)-lt_fiducial_global(i,:));
+    v3(i,:)=(rt_fiducial_global(i,:)-rb_fiducial_global(i,:));
     v1(i,:)=cross(v2(i,:),v3(i,:));
     
     v1(i,:)=v1(i,:)/norm(v1(i,:));
@@ -716,10 +661,10 @@ if (opt_d1<opt_d2) & ((opt_d3+opt_d4)/2 >(opt_d1+opt_d2)/2)
 
     
     %Tx Panel
-elseif (opt_d3<opt_d4) & ((opt_d2+opt_d1)/2 >(opt_d3+opt_d4)/2)
+elseif (opt_d3>opt_d4) & ((opt_d2+opt_d1)/2 >(opt_d3+opt_d4)/2)
     panel_type{i}='Tx';
-    v2(i,:)=(rb_fiducial_global(i,:)-lb_fiducial_global(i,:));
-    v3(i,:)=(rt_fiducial_global(i,:)-rb_fiducial_global(i,:));
+    v2(i,:)=(rt_fiducial_global(i,:)-lt_fiducial_global(i,:));
+    v3(i,:)=(lt_fiducial_global(i,:)-lb_fiducial_global(i,:));
     v1(i,:)=cross(v2(i,:),v3(i,:));   
     
     v1(i,:)=v1(i,:)/norm(v1(i,:));
