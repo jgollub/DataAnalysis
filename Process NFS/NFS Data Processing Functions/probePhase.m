@@ -36,14 +36,14 @@ switch use_case
         phase_correction=abs(measured).*sqrt(exp(-1.0j*angle(measured)));
         
     case 2
-        probe_Measurement_Path='C:\Users\lab\Documents\MidImager_Data\NFS_OLD_PANELS\Probe_cal\probephase.mat'; 
+        probe_Measurement_Path='D:\Dropbox (Duke Electric & Comp)\MetaImager Data (1)\Scans\TEMP\probephase.mat'; 
         load(probe_Measurement_Path)
         
         phase_correction=exp(1.0i*probe_phase_meas);
     case 3
-        file='C:\Users\lab\Documents\data\response\nsi\nsi_wr42_18p0-26p5GHz_801pts.mat'; 
+%         file='C:\Users\lab\Documents\data\response\nsi\nsi_wr42_18p0-26p5GHz_801pts.mat'; 
         
-%         file='C:\Users\lab\Documents\data\response\nsi\nsi_wr42_17p5-26p5GHz_801pts.mat'; 
+        file='C:\Users\lab\Documents\data\response\nsi\nsi_wr42_17p5-26p5GHz_801pts.mat'; 
         probe_phase=load(file);
         
         [f_check, f_location]=ismember(freqpts,probe_phase.f);
