@@ -11,13 +11,13 @@ f_num=101;
 f=linspace(18e9,26.5e9,f_num);
 
 %Number of polarizations
-numPol=2; %no check in code !!!!
+numPol=1; %no check in code !!!!
 
 %constants
 c=299792458;    % [m/s] Speed of light
 
 %Folder containing NFS data
-Raw_Data_Folder='C:\Users\lab\Documents\MidImager_Data\NFS_data_3';
+Raw_Data_Folder='C:\Users\lab\Documents\MidImager_Data\NFS_data';
 files=dir([Raw_Data_Folder,'\*.csv']);
 
 %% clean NFS  data (.CSV files) by removing spaces/comments/etc 
@@ -140,7 +140,7 @@ files=dir([Raw_Data_Folder,'\CLEANED_CSV\*.CSV']);
 %make sure to set number of polarizations
 
 for i=1:length(files)
-    file_in=[Raw_Data_Folder,'\CLEANED_CSV\',files(i).name]
+    file_in=[Raw_Data_Folder,'\CLEANED_CSV\',files(i).name];
     file_out=[Raw_Data_Folder,'\PANEL_FILES_RAW\',files(i).name(9:end-4),'.mat'];
     
     %Process each panel and remove excess phase (6+ entries in function)   
@@ -215,10 +215,10 @@ for loop=1:1:2
 %       range=[-0.0475, -0.0525]; %%back-propagation distance for plane 1 (in meters) - this one is physically measured for the scan
         range=[-0.0595, -0.0645]; %%back-propagation distance for plane 1 (in meters) - this one is physically measured for the scan
            
-%          ey{loop}=bp(measurements(:,:,:,1),X,Y,range(loop)); %% ey is the summed up back-propagated field - all frequencies and all polarizations
+         ey{loop}=bp(measurements(:,:,:,1),X,Y,range(loop)); %% ey is the summed up back-propagated field - all frequencies and all polarizations
 %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!        
         %!!! use single polarization to find fiducials
-         ey{loop}=bp(measurements,X,Y,range(loop));
+%          ey{loop}=bp(measurements,X,Y,range(loop));
         
         %yy=X/1000; 
         %zz=Y/1000;
@@ -411,8 +411,8 @@ fieldsPrimed=[];
 for frno=1:nf
 wavl=c/f(frno);
 fieldsPrimed(:,:,1)=transfield(measurements(:,:,frno,1),[0,0,range(2)/wavl], wavl/sampdist,wavl/sampdist); %!!! sign of range(2) is implied (-) may need change later
- fieldsPrimed(:,:,2)=transfield(measurements(:,:,frno,2),[0,0,range(2)/wavl], wavl/sampdist,wavl/sampdist);
- %fieldsPrimed(:,:,2)=0; %!!!!!!!!!!!!!!!!!! note should take in both polarizations
+%  fieldsPrimed(:,:,2)=transfield(measurements(:,:,frno,2),[0,0,range(2)/wavl], wavl/sampdist,wavl/sampdist);
+ fieldsPrimed(:,:,2)=0; %!!!!!!!!!!!!!!!!!! note should take in both polarizations
 fieldsPrimed(:,:,3)=0;
 
 fieldsPrimed=rotfield(fieldsPrimed,T,wavl/sampdist,wavl/sampdist);
