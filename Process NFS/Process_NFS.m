@@ -8,7 +8,7 @@ debug_on=1;
 
 %Output frequencies
 f_num=101;
-f=linspace(18e9,26.5e9,f_num);
+f=linspace(17.5e9,26.5e9,f_num);
 
 %Number of polarizations
 numPol=1; %no check in code !!!!
@@ -18,6 +18,7 @@ c=299792458;    % [m/s] Speed of light
 
 %Folder containing NFS data
 Raw_Data_Folder='C:\Users\lab\Documents\MidImager_Data\NFS_data';
+
 files=dir([Raw_Data_Folder,'\*.csv']);
 
 %% clean NFS  data (.CSV files) by removing spaces/comments/etc 
@@ -75,7 +76,7 @@ end
 debug_on=1;
 
 % file='C:\Users\lab\Documents\MidImager_Data\Horizontal\Cable_measurement\HORIZONTAL_Cable_response.csv';
-file='C:\Users\lab\Documents\MidImager_Data\NFS_data\NSI_CABLE_MEASURED\cable.csv';
+file='C:\Users\MetaImagerDuo\Desktop\TODAY\Slots\cable_measurement\cable_response_11_17_2015.csv';
 
 [directory,name,ext]=fileparts(file);
 file_in=[directory,'\',name,ext];
@@ -553,7 +554,7 @@ save([Raw_Data_Folder,'\PANEL_FILES_ALIGNED\',files(i).name], 'measurements', 'X
 end
 
 %% Optical Scanning and panel placement
-Optical_Scan='C:\Users\lab\Documents\MidImager_Data\NFS_data\CREAFORM MEASUREMENT\MidImager_Positions.txt';
+Optical_Scan='D:\Dropbox (Duke Electric & Comp)\MetaImager Data (1)\Scans\OPTICAL_SCAN\Mid_Imager_Positions_11_18_2015.txt';
 Optical_Data=dlmread(Optical_Scan,'\t',0,0);
 opt_fiducial = Optical_Data(Optical_Data(:,9)==0,1:3)/1000; %also convert m
 opt_fiducial_coded=Optical_Data(Optical_Data(:,9)>7,[1 2 3 9]); %any coded fiducial less than 7 is coord sys or bar 
@@ -561,7 +562,7 @@ opt_fiducial_coded(:,1:3)=opt_fiducial_coded(:,1:3)/1000; %also convert m
 
 figure(10); clf;
 hold on
-% scatter3(opt_fiducial(:,1),opt_fiducial(:,2),opt_fiducial(:,3), 20,'k');
+ scatter3(opt_fiducial(:,1),opt_fiducial(:,2),opt_fiducial(:,3), 20,'k');
 scatter3(opt_fiducial_coded(:,1),opt_fiducial_coded(:,2),opt_fiducial_coded(:,3), 20,'blue');
 view(0,90)
 
@@ -636,7 +637,7 @@ end
 
 end
 
-hold on;
+hold on; figure(10)
 for i=1:size(opt_fiducial_coded,1)
         color=rand(1,3);
     scatter3(lt_fiducial(i,1),lt_fiducial(i,2),lt_fiducial(i,3), 20,color,'filled');
@@ -702,10 +703,15 @@ end
 
 for i=1:size(opt_fiducial_coded,1)
 
-    
+opt_d1=norm(lt_fiducial_global(i,:)-rt_fiducial_global(i,:));
+opt_d2=norm(lb_fiducial_global(i,:)-rb_fiducial_global(i,:));
+opt_d3=norm(lt_fiducial_global(i,:)-lb_fiducial_global(i,:));
+opt_d4=norm(rt_fiducial_global(i,:)-rb_fiducial_global(i,:));
+
     %Rx panel
 if (opt_d1<opt_d2) & ((opt_d3+opt_d4)/2 >(opt_d1+opt_d2)/2) 
     panel_type{i}='Rx';
+    
     v2(i,:)=(rb_fiducial_global(i,:)-lb_fiducial_global(i,:));
     v3(i,:)=(lt_fiducial_global(i,:)-lb_fiducial_global(i,:));
     v1(i,:)=cross(v2(i,:),v3(i,:));
@@ -714,7 +720,6 @@ if (opt_d1<opt_d2) & ((opt_d3+opt_d4)/2 >(opt_d1+opt_d2)/2)
     v2(i,:)=v2(i,:)/norm(v2(i,:));
     v3(i,:)=v3(i,:)/norm(v3(i,:));
 
-    
     %Tx Panel
 elseif (opt_d3<opt_d4) & ((opt_d2+opt_d1)/2 >(opt_d3+opt_d4)/2)
     panel_type{i}='Tx';
@@ -731,13 +736,19 @@ else
     v2(i,:)=nan(1,3);
     v3(i,:)=nan(1,3);
 end
+
 u=v1(i,:);
 v=v2(i,:);
 w=v3(i,:);
-
+% 
+% if i~=cPan
+%     i~=cPan
 Qg=[[[1 0 0].' , [0 1 0 ].', [0 0 1].' ].',center_panel_global(i,:).';[0 0 0 1]]; %shift to panel
 Mg=inv([[u.', v.', w.' ].',[0 0 0].';[0 0 0 1]]); %inv because we are rotating panels to their positions (opposite of transformation)
 T_Panel(:,:,i)=Qg*Mg; %opposite of translation to coordinate system 
+% else
+%     T_Panel(:,:,cPan)=eye(4,4);
+% end
 end
 
 mkdir([Raw_Data_Folder,'\OPTICAL_SCAN_POSITIONS\']);

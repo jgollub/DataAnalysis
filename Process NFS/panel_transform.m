@@ -5,7 +5,7 @@ function p1 = panel_transform(p1, T)
 
 if iscell(p1)
     for in=1:length(p1)        
-        p1{in} = panel_transform(p1{in}, alpha, beta, gamma);
+        p1{in} = panel_transform(p1{in}, T);
     end
     return;
 end
