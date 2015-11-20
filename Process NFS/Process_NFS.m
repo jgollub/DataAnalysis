@@ -118,19 +118,19 @@ if debug_on
 end
 
 %% conector phase 
-% Remove calkit
-dt=115.881e-12; % [s] Per calkit specsheet
-dx=c*dt;        % [m] Calkit pathlength
-connector=exp(-1.0j * dx * 2*pi*f/c);
-% connector=connector.';    
-
-
-if debug_on
-debug_connector=figure(3);
-subplot(2,1,1);
-plot(f,real(connector).','--r');
-xlabel('frequency'); ylabel('amplitude'); legend('datasheet');
-end
+% % Remove calkit
+% dt=115.881e-12; % [s] Per calkit specsheet
+% dx=c*dt;        % [m] Calkit pathlength
+% connector=exp(-1.0j * dx * 2*pi*f/c);
+% % connector=connector.';    
+% 
+% 
+% if debug_on
+% debug_connector=figure(3);
+% subplot(2,1,1);
+% plot(f,real(connector).','--r');
+% xlabel('frequency'); ylabel('amplitude'); legend('datasheet');
+% end
 
 
 %% Process NSI files; remove excess phase; save as .MAT files
@@ -144,7 +144,7 @@ for i=1:length(files)
     file_out=[Raw_Data_Folder,'\PANEL_FILES_RAW\',files(i).name(9:end-4),'.mat'];
     
     %Process each panel and remove excess phase (6+ entries in function)   
-    NSI2Panel(file_out,file_in,f_NSI,f,numPol,NSI_probe_response,NSI_cables_response,connector);
+    NSI2Panel(file_out,file_in,f_NSI,f,numPol,NSI_probe_response,NSI_cables_response);
 
     %NSI2Panel(file_out,file_in,f_NSI,f,2,NSI_cables_response);
     fprintf(['FINISHED FILE: ',files(i).name(1:end-4),'.mat \n']);
@@ -553,7 +553,7 @@ save([Raw_Data_Folder,'\PANEL_FILES_ALIGNED\',files(i).name], 'measurements', 'X
 end
 
 %% Optical Scanning and panel placement
-Optical_Scan='D:\Dropbox (Duke Electric & Comp)\MetaImager Data (1)\Scans\OPTICAL_SCAN\Mid_Imager_Positions_11_18_2015.txt';
+Optical_Scan='H:\AHHHHHH\Optical_Positions_11_19_2015.txt';
 Optical_Data=dlmread(Optical_Scan,'\t',0,0);
 opt_fiducial = Optical_Data(Optical_Data(:,9)==0,1:3)/1000; %also convert m
 opt_fiducial_coded=Optical_Data(Optical_Data(:,9)>7,[1 2 3 9]); %any coded fiducial less than 7 is coord sys or bar 

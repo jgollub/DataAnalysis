@@ -43,7 +43,7 @@ switch use_case
     case 3
 %         file='C:\Users\lab\Documents\data\response\nsi\nsi_wr42_18p0-26p5GHz_801pts.mat'; 
         
-        file='C:\Users\lab\Documents\data\response\nsi\nsi_wr42_17p5-26p5GHz_801pts.mat'; 
+        file='C:\Users\MetaImagerDuo\Desktop\TODAY\nsi\nsi_wr42_17p5-26p5GHz_801pts.mat'; 
         probe_phase=load(file);
         
         [f_check, f_location]=ismember(freqpts,probe_phase.f);
