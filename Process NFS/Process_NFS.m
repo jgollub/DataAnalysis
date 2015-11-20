@@ -8,7 +8,7 @@ debug_on=1;
 
 %Output frequencies
 f_num=101;
-f=linspace(17.5e9,26.5e9,f_num);
+f=linspace(18.0e9,26.5e9,f_num);
 
 %Number of polarizations
 numPol=1; %no check in code !!!!
@@ -49,7 +49,7 @@ disp('WARNING:using loaded f_NSI data')
 end
 
 %choose probe correction
-use_case=3;
+use_case=4;
 
 NSI_probe_response=probePhase(f,use_case);
 
@@ -75,8 +75,8 @@ end
 %% NSI cable phase response (taken from 4 pt measurement)
 debug_on=1;
 
-% file='C:\Users\lab\Documents\MidImager_Data\Horizontal\Cable_measurement\HORIZONTAL_Cable_response.csv';
-file='C:\Users\MetaImagerDuo\Desktop\TODAY\Slots\cable_measurement\cable_response_11_17_2015.csv';
+ file='C:\Users\lab\Documents\MidImager_Data\NFS_data\NSI_CABLE_MEASURED\cable.csv';
+% file='C:\Users\MetaImagerDuo\Desktop\TODAY\Slots\cable_measurement\cable_response_11_17_2015.csv';
 
 [directory,name,ext]=fileparts(file);
 file_in=[directory,'\',name,ext];
