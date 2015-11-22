@@ -43,9 +43,8 @@ switch use_case
     case 3
  
         file='C:\Users\lab\Documents\data\response\nsi\nsi_wr42_17p5-26p5GHz_801pts.mat'; 
+
         probe_phase=load(file);
-        
-        
         
         [f_check, f_location]=ismember(freqpts,probe_phase.f);
         
@@ -58,7 +57,7 @@ switch use_case
     case 4
          file='C:\Users\lab\Documents\data\response\nsi\nsi_wr42_18p0-26p5GHz_801pts.mat'; 
          probe_phase=load(file);
-         probe_phase.r=-probe_phase.r;
+         probe_phase.r=-probe_phase.r; %!!!!!!!!!!!!!!!!!! added neg sign because file is off by pi from 17.5 file
         
         [f_check, f_location]=ismember(freqpts,probe_phase.f);
         

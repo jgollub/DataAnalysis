@@ -11,13 +11,13 @@ f_num=101;
 f=linspace(18.0e9,26.5e9,f_num);
 
 %Number of polarizations
-numPol=1; %no check in code !!!!
+numPol=2; %no check in code !!!!
 
 %constants
 c=299792458;    % [m/s] Speed of light
 
 %Folder containing NFS data
-Raw_Data_Folder='C:\Users\lab\Documents\MidImager_Data\NFS_data';
+Raw_Data_Folder='C:\Users\lab\Documents\MidImager_Data\NFS_DATA_9';
 
 files=dir([Raw_Data_Folder,'\*.csv']);
 
@@ -75,8 +75,8 @@ end
 %% NSI cable phase response (taken from 4 pt measurement)
 debug_on=1;
 
+%  file='C:\Users\lab\Documents\MidImager_Data\NFS_DATA_9\cable_response\cable_response_11_17_2015.csv';
  file='C:\Users\lab\Documents\MidImager_Data\NFS_data\NSI_CABLE_MEASURED\cable.csv';
-% file='C:\Users\MetaImagerDuo\Desktop\TODAY\Slots\cable_measurement\cable_response_11_17_2015.csv';
 
 [directory,name,ext]=fileparts(file);
 file_in=[directory,'\',name,ext];
@@ -123,7 +123,7 @@ end
 dt=115.881e-12; % [s] Per calkit specsheet
 dx=c*dt;        % [m] Calkit pathlength
 connector=exp(-1.0j * dx * 2*pi*f/c);
-% connector=connector.';    
+connector=connector.';    
 
 
 if debug_on
@@ -152,10 +152,10 @@ for i=1:length(files)
 end
 
 
-if 1 %debug
+if 0 %debug
     mkdir([Raw_Data_Folder,'\DEBUG\']);
     %plot efficiency at each step
-    for i=1
+    for i=0
         file_out=[Raw_Data_Folder,'\DEBUG\',files(i).name(9:end-4),'_1.mat'];
         NSI2Panel(file_out,file_in,f_NSI,f,numPol,NSI_probe_response);
         pe1_data=load(file_out);
@@ -216,10 +216,10 @@ for loop=1:1:2
 %       range=[-0.0475, -0.0525]; %%back-propagation distance for plane 1 (in meters) - this one is physically measured for the scan
         range=[-0.0595, -0.0645]; %%back-propagation distance for plane 1 (in meters) - this one is physically measured for the scan
            
-         ey{loop}=bp(measurements(:,:,:,1),X,Y,range(loop)); %% ey is the summed up back-propagated field - all frequencies and all polarizations
+%          ey{loop}=bp(measurements(:,:,:,1),X,Y,range(loop)); %% ey is the summed up back-propagated field - all frequencies and all polarizations
 %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!        
         %!!! use single polarization to find fiducials
-%          ey{loop}=bp(measurements,X,Y,range(loop));
+        ey{loop}=bp(measurements,X,Y,range(loop));
         
         %yy=X/1000; 
         %zz=Y/1000;
@@ -412,8 +412,8 @@ fieldsPrimed=[];
 for frno=1:nf
 wavl=c/f(frno);
 fieldsPrimed(:,:,1)=transfield(measurements(:,:,frno,1),[0,0,range(2)/wavl], wavl/sampdist,wavl/sampdist); %!!! sign of range(2) is implied (-) may need change later
-%  fieldsPrimed(:,:,2)=transfield(measurements(:,:,frno,2),[0,0,range(2)/wavl], wavl/sampdist,wavl/sampdist);
- fieldsPrimed(:,:,2)=0; %!!!!!!!!!!!!!!!!!! note should take in both polarizations
+  fieldsPrimed(:,:,2)=transfield(measurements(:,:,frno,2),[0,0,range(2)/wavl], wavl/sampdist,wavl/sampdist);
+%  fieldsPrimed(:,:,2)=0; %!!!!!!!!!!!!!!!!!! note should take in both polarizations
 fieldsPrimed(:,:,3)=0;
 
 fieldsPrimed=rotfield(fieldsPrimed,T,wavl/sampdist,wavl/sampdist);
@@ -554,7 +554,7 @@ save([Raw_Data_Folder,'\PANEL_FILES_ALIGNED\',files(i).name], 'measurements', 'X
 end
 
 %% Optical Scanning and panel placement
-Optical_Scan='D:\Dropbox (Duke Electric & Comp)\MetaImager Data (1)\Scans\OPTICAL_SCAN\Mid_Imager_Positions_11_18_2015.txt';
+Optical_Scan='H:\Optical_Positions_11_20_2015\Optical_Positions_11_20_2015.txt';
 Optical_Data=dlmread(Optical_Scan,'\t',0,0);
 opt_fiducial = Optical_Data(Optical_Data(:,9)==0,1:3)/1000; %also convert m
 opt_fiducial_coded=Optical_Data(Optical_Data(:,9)>7,[1 2 3 9]); %any coded fiducial less than 7 is coord sys or bar 
