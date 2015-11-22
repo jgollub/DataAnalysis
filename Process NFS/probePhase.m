@@ -45,7 +45,7 @@ switch use_case
         file='C:\Users\lab\Documents\data\response\nsi\nsi_wr42_17p5-26p5GHz_801pts.mat'; 
 
         probe_phase=load(file);
-        
+        probe_phase.r=-probe_phase.r;
         [f_check, f_location]=ismember(freqpts,probe_phase.f);
         
         if ~all(f_check) && numel(sum(f_location>0))~=numel(freqpts)
