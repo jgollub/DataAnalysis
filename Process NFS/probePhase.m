@@ -36,18 +36,36 @@ switch use_case
         phase_correction=abs(measured).*sqrt(exp(-1.0j*angle(measured)));
         
     case 2
-        probe_Measurement_Path='D:\Dropbox (Duke Electric & Comp)\MetaImager Data\Near Field Scans\printed dipole\probephase.mat'; 
+        probe_Measurement_Path='D:\Dropbox (Duke Electric & Comp)\MetaImager Data (1)\Scans\TEMP\probephase.mat'; 
         load(probe_Measurement_Path)
         
         phase_correction=exp(1.0i*probe_phase_meas);
     case 3
-        path='C:\Users\lab\Documents\data\response\nsi\nsi_wr42_18p0-26p0GHz_801pts.mat'; 
-        probe_phase=load(path);
-        
+ 
+        file='C:\Users\lab\Documents\data\response\nsi\nsi_wr42_17p5-26p5GHz_801pts.mat'; 
+
+        probe_phase=load(file);
+        probe_phase.r=-probe_phase.r;
         [f_check, f_location]=ismember(freqpts,probe_phase.f);
-        if ~all(f_check)
+        
+        if ~all(f_check) && numel(sum(f_location>0))~=numel(freqpts)
         error('Input frequencies do not match up with NSI data frequencies')
         end
+        
         phase_correction=probe_phase.r(f_location);
+        
+    case 4
+         file='C:\Users\lab\Documents\data\response\nsi\nsi_wr42_18p0-26p5GHz_801pts.mat'; 
+         probe_phase=load(file);
+         probe_phase.r=-probe_phase.r; %!!!!!!!!!!!!!!!!!! added neg sign because file is off by pi from 17.5 file
+        
+        [f_check, f_location]=ismember(freqpts,probe_phase.f);
+        
+        if ~all(f_check) && numel(sum(f_location>0))~=numel(freqpts)
+        error('Input frequencies do not match up with NSI data frequencies')
+        end
+        
+        phase_correction=probe_phase.r(f_location);
+        
         
 end

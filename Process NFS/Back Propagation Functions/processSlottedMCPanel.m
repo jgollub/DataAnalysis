@@ -12,7 +12,7 @@ value_z=-board_size/2;
 [~,index_y_lb]=min(abs(yy(:)-value_y));
 [~,index_z_lb]=min(abs(zz(:)-value_z));
 
-% scatter3(0,yy(index_y_lb),zz(index_z_lb),100,'green','square','LineWidth',2)
+%  scatter3(0,yy(index_y_lb),zz(index_z_lb),100,'green','square','LineWidth',2)
 
 
 %%% Right Bottom Corner
@@ -24,7 +24,7 @@ value_z=-board_size/2;
 [~,index_z_rb]=min(abs(zz(:)-value_z));
 
 
-% scatter3(0,yy(index_y_rb),zz(index_z_rb),100,'green','square','LineWidth',2)
+%  scatter3(0,yy(index_y_rb),zz(index_z_rb),100,'green','square','LineWidth',2)
 
 
 %%% Left Top Corner
@@ -36,7 +36,7 @@ value_z=board_size/2;
 [~,index_z_lt]=min(abs(zz(:)-value_z));
 
 
-% scatter3(0,yy(index_y_lt),zz(index_z_lt),100,'green','square','LineWidth',2)
+%  scatter3(0,yy(index_y_lt),zz(index_z_lt),100,'green','square','LineWidth',2)
 
 %%% Right Top Corner
 %%%% Find the indices for the board edges
@@ -47,7 +47,7 @@ value_z=board_size/2;
 [~,index_z_rt]=min(abs(zz(:)-value_z));
 
 
-% scatter3(0,yy(index_y_rt),zz(index_z_rt),100,'green','square','LineWidth',2)
+%  scatter3(0,yy(index_y_rt),zz(index_z_rt),100,'green','square','LineWidth',2)
 
 % Define coordinates for wrt board edges
 if abs(index_y_lb)>abs(index_y_lt)
@@ -74,10 +74,10 @@ else
 z_top_limit=index_z_rt;
 end
 
-% %plot outline
-% line([0, 0 ,0, 0, 0],...
-%     [yy(y_left_limit), yy(y_right_limit), yy(y_right_limit), yy(y_left_limit),yy(y_left_limit)], ...
-%     [zz(z_top_limit),zz(z_top_limit),zz(z_bottom_limit),zz(z_bottom_limit),zz(z_top_limit)],'color','blue','LineWidth',1)
+%plot outline
+line([0, 0 ,0, 0, 0],...
+    [yy(y_left_limit), yy(y_right_limit), yy(y_right_limit), yy(y_left_limit),yy(y_left_limit)], ...
+    [zz(z_top_limit),zz(z_top_limit),zz(z_bottom_limit),zz(z_bottom_limit),zz(z_top_limit)],'color','blue','LineWidth',1)
 
 % Assign New Coordinates Enclosing the Panel
 reduced_region_positions.y=yy((yy>yy(y_left_limit) & yy<yy(y_right_limit)) & (zz<zz(z_top_limit)& zz>zz(z_bottom_limit)));
@@ -86,12 +86,12 @@ reduced_region_positions.x=xx((yy>yy(y_left_limit) & yy<yy(y_right_limit)) & (zz
 
 reduced_region_fields=fields(yy>yy(y_left_limit) & yy<yy(y_right_limit) & (zz<zz(z_top_limit)& zz>zz(z_bottom_limit)));
  
-
-hold on;  
-scatter3(reduced_region_positions.x(:),reduced_region_positions.y(:),reduced_region_positions.z(:),40,20*log10(abs(reduced_region_fields(:))),'filled')
-        axis normal; colormap('hot');set(gcf,'color','w');
-        xlabel('x'); ylabel('y'); zlabel('z'); axis equal; axis tight;
-        view(90,0); hold on;
+% 
+% hold on;  
+% scatter3(reduced_region_positions.x(:),reduced_region_positions.y(:),reduced_region_positions.z(:),40,20*log10(abs(reduced_region_fields(:))),'filled')
+%         axis normal; colormap('hot');set(gcf,'color','w');
+%         xlabel('x'); ylabel('y'); zlabel('z'); axis equal; axis tight;
+%         view(90,0); hold on;
  
 % scatter3(fiducial.x(:),fiducial.y(:),fiducial.z(:),20,20*log10(abs(reduced_region)),'filled')
  % At this point we need to decide whether this is Tx or Rx panel
@@ -108,6 +108,8 @@ scatter3(reduced_region_positions.x(:),reduced_region_positions.y(:),reduced_reg
  %%%% Choose = Tx or Rx
 
  mm=0.001;
+  
+ 
 
  if MC_vertical_test>MC_horizontal_test
      panel_type='Rx';
