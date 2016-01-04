@@ -8,30 +8,41 @@ Y=flip(data.Y,1);
 imagesc(X(1,:),Y(:,1),abs(measurements(:,:,f_num,1)));
 axis xy; axis equal; axis tight;
 
+pad=2^nextpow2(max(numel(X(1,:)),numel(Y(:,1))));
+
 dx=(X(1,2)-X(1,1))/1e3;
 dy=(Y(2,1)-Y(1,1))/1e3;
 Lx=(X(1,end)-X(1,1))/1e3; Ly=(Y(end,1)-Y(1,1))/1e3;
-kxVec=-2*pi/(2*dx):2*pi/(Lx):2*pi/(2*dx);
-kyVec=-2*pi/(2*dy):2*pi/(Ly):2*pi/(2*dy);
+dFx=dx*(pad)/Lx;
+dFy=dy*(pad)/Ly;
+
+kxVec=-2*pi/(2*dx):2*pi/(dFx*Lx):(2*pi/(2*dx)-2*pi/(dFy*Lx));
+kyVec=-2*pi/(2*dy):2*pi/(dFy*Ly):(2*pi/(2*dy)-2*pi/(dFy*Ly));
 [kx, ky]=meshgrid(kxVec,kyVec);
 
-for ii=1:1
-k0=2*pi*data.f(ii)/c;
+k0=2*pi*data.f(f_num)/c;
 kz=sqrt(k0.^2-kx.^2-ky.^2);
-end
+% end
 %propogate fields
 figure(2); clf;
-% for z=-.07:.001:0;
-z=-.06
+ for z=-.1:.001:0;
+% z=-0.02;
 subplot(1,2,1);
-for ii=1:1
-fE=fft2(fftshift(measurements(:,:,1,ii)));
-imagesc(kxVec,kyVec,abs(ifftshift(fE)));
+ 
+fE=fft2(measurements(:,:,f_num,1),pad,pad);
+fE=fE.*exp(-1.0j*kx*(Lx/2)).*exp(-1.0j*ky*(Ly/2));
+imagesc(abs(ifftshift(fE)));
+% imagesc(ifftshift(abs(fE))); imagesc(abs(ifft2(fE)));
+% imagesc(abs(ifft2(fft2(measurements(:,:,jj,ii),pad,pad))))
 axis xy; axis equal; axis tight;
-fE=fftshift(ifftshift(fE).*exp(-1j*kz*z));
-E=ifftshift(ifft2(fE));
-end
+fEz=fftshift(ifftshift(fE).*exp(-1j*(kz*z)));
+% imagesc(real(kz));
+% imagesc(abs(fEz));
+E=ifft2(fEz);
 subplot(1,2,2);
-imagesc(kxVec,kyVec,abs(E));
+imagesc(X(1,:),Y(:,1),abs(E));
 axis xy; axis equal; axis tight;
+ drawnow
 
+pause
+ end
