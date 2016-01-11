@@ -3,7 +3,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% clean NFS  data and save as ".mat" file
-Raw_Data_Folder='C:\Users\lab\Documents\MidImager_Data\NFS_data\NEW_PROCESSING SCRIPT';
+Raw_Data_Folder='D:\Dropbox (Duke Electric & Comp)\MetaImager Data\Panel Characterization\Slotted_MC';
 files=dir([Raw_Data_Folder,'\*.csv']);
 
 for i=1:length(files)
@@ -194,11 +194,8 @@ for loop=1:1:2
    
         figure(4); 
 %       range=[-0.0475, -0.0525]; %%back-propagation distance for plane 1 (in meters) - this one is physically measured for the scan
-        range=[-0.0595, -0.0645]; %%back-propagation distance for plane 1 (in meters) - this one is physically measured for the scan
-           
-%          ey{loop}=bp(measurements(:,:,:,1),X,Y,range(loop)); %% ey is the summed up back-propagated field - all frequencies and all polarizations
-%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!        
-        %!!! use single polarization to find fiducials
+%         range=[-0.0595, -0.0645]; %%back-propagation distance for plane 1 (in meters) - this one is physically measured for the scan
+        range=[-0.0595, -0.06];
         ey{loop}=bp(measurements,X,Y,range(loop));
         
         %yy=X/1000; 
@@ -391,19 +388,89 @@ new_measurements=zeros(size(measurements));
 fieldsPrimed=[];
 for frno=1:nf
 wavl=c/f(frno);
-fieldsPrimed(:,:,1)=transfield(measurements(:,:,frno,1),[0,0,range(2)/wavl], wavl/sampdist,wavl/sampdist); %!!! sign of range(2) is implied (-) may need change later
-  fieldsPrimed(:,:,2)=transfield(measurements(:,:,frno,2),[0,0,range(2)/wavl], wavl/sampdist,wavl/sampdist);
-%  fieldsPrimed(:,:,2)=0; %!!!!!!!!!!!!!!!!!! note should take in both polarizations
+switch size(measurements(:,:,frno,1),4)
+    case 1
+        fieldsPrimed(:,:,1)=transfield(measurements(:,:,frno,1),...
+                                       [0,0,range(2)/wavl], ...
+                                       wavl/sampdist,wavl/sampdist); %!!! sign of range(2) is implied (-) may need change later
+        fieldsPrimed(:,:,2)=0; 
+    case 2
+        fieldsPrimed(:,:,1)=transfield(measurements(:,:,frno,1),[0,0,range(2)/wavl], wavl/sampdist,wavl/sampdist); %!!! sign of range(2) is implied (-) may need change later
+        fieldsPrimed(:,:,2)=transfield(measurements(:,:,frno,2),[0,0,range(2)/wavl], wavl/sampdist,wavl/sampdist);
+end   
 fieldsPrimed(:,:,3)=0;
 
 fieldsPrimed=rotfield(fieldsPrimed,T,wavl/sampdist,wavl/sampdist);
 
-new_measurements(:,:,frno,1)=fieldsPrimed(:,:,1);
-new_measurements(:,:,frno,2)=fieldsPrimed(:,:,2);
+rot_measurements(:,:,frno,1)=fieldsPrimed(:,:,1);
+rot_measurements(:,:,frno,2)=fieldsPrimed(:,:,2);
 
 magaddsq=magaddsq+sqrt(abs(fieldsPrimed(:,:,1)).^2+abs(fieldsPrimed(:,:,2)).^2);
 
 end
+
+% solve for minimum NFS distance
+deltarange=.005;
+stepsize=.0001;
+focus_dist=-deltarange:stepsize:deltarange;
+ figure(101); clf; hold on; clear image FM;
+ subplot(2,2,1);
+ scatter3(xx(:),yy(:),zz(:),6,20*log10(magaddsq(:)),'filled')
+        axis image; colormap('hot');set(gcf,'color','w');
+       title(['initial guess', num2str(range(2))]);
+        xlabel('x'); ylabel('y'); zlabel('z'); axis equal; axis tight;
+        view(90,0); hold on;
+        drawnow;
+ 
+ for loop=1:numel(focus_dist)
+focus{loop}=bp(rot_measurements,X,Y,focus_dist(loop));
+
+%find best focus using laplacian
+FM{loop} = fmeasure(focus{loop}, 'LAPE',[]);
+
+%         subplot(1,numel(distance),loop); 
+         subplot(2,2,2); cla;
+        scatter3(xx(:),yy(:),zz(:),6,20*log10(abs(focus{loop}(:))),'filled')
+        axis image; colormap('hot');set(gcf,'color','w');
+       title(['Delta Offset', num2str(focus_dist(loop))]);
+        xlabel('x'); ylabel('y'); zlabel('z'); axis equal; axis tight;
+        view(90,0); hold on;
+        drawnow;
+ end
+merit=[FM{:}];
+[~, min_merit]=min(merit);
+[~, max_merit]=max(merit);
+
+subplot(2,2,2); cla;
+scatter3(xx(:),yy(:),zz(:),6,20*log10(abs(focus{max_merit}(:))),'filled')
+axis image; colormap('hot');set(gcf,'color','w');
+title(['Delta Offset', num2str(range(2)+focus_dist(max_merit))]);
+xlabel('x'); ylabel('y'); zlabel('z'); axis equal; axis tight;
+view(90,0); hold on;
+drawnow;
+ 
+subplot(2,2,3:4); 
+plot(focus_dist(:),merit)
+display(['minimum: ',num2str(focus_dist(min_merit))])
+display(['maximum: ',num2str(focus_dist(max_merit))])
+antenna_plane=focus_dist(max_merit);
+title(['maximum delta position: ', num2str(focus_dist(max_merit)), ' m'])
+
+
+for frno=1:nf
+wavl=c/f(frno);
+
+        fieldsPrimed(:,:,1)=transfield(rot_measurements(:,:,frno,1),[0,0,antenna_plane/wavl], wavl/sampdist,wavl/sampdist); %!!! sign of range(2) is implied (-) may need change later
+        fieldsPrimed(:,:,2)=transfield(rot_measurements(:,:,frno,2),[0,0,antenna_plane/wavl], wavl/sampdist,wavl/sampdist);
+        fieldsPrimed(:,:,3)=0;
+
+antennaPlane_measurements(:,:,frno,1)=fieldsPrimed(:,:,1);
+antennaPlane_measurements(:,:,frno,2)=fieldsPrimed(:,:,2);
+
+magaddsq=magaddsq+sqrt(abs(fieldsPrimed(:,:,1)).^2+abs(fieldsPrimed(:,:,2)).^2);
+
+end
+% %%%%
 
 figure(7); clf;
 subplot(2,2,1) 
@@ -477,8 +544,8 @@ for frno=1:nf
 wavl=c/f(frno);
 
 %%%!!!!!!!!
-fieldsPrimed(:,:,1)=transfield(new_measurements(:,:,frno,1), transvec/wavl, wavl/sampdist,wavl/sampdist); %!!! sign of range(2) is implied (-) may need change later
-fieldsPrimed(:,:,2)=transfield(new_measurements(:,:,frno,2), transvec/wavl, wavl/sampdist,wavl/sampdist);
+fieldsPrimed(:,:,1)=transfield(antennaPlane_measurements(:,:,frno,1), transvec/wavl, wavl/sampdist,wavl/sampdist); %!!! sign of range(2) is implied (-) may need change later
+fieldsPrimed(:,:,2)=transfield(antennaPlane_measurements(:,:,frno,2), transvec/wavl, wavl/sampdist,wavl/sampdist);
 fieldsPrimed(:,:,3)=0;
 
 new_measurements(:,:,frno,1)=fieldsPrimed(:,:,1);
