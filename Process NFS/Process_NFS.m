@@ -3,7 +3,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% clean NFS  data and save as ".mat" file
+
 Raw_Data_Folder='D:\MC Slotted Panels\Version2_1_12_2016\Near_Field_Scans\';
+
 files=dir([Raw_Data_Folder,'\*.csv']);
 
 for i=1:length(files)
@@ -114,7 +116,6 @@ plot(f,real(connector).','--r');
 xlabel('frequency'); ylabel('amplitude'); legend('datasheet');
 end
 
-
 %% Process NSI files; remove excess phase; save as .MAT files
 mkdir([Raw_Data_Folder,'\PANEL_FILES_RAW\']);
 files=dir([Raw_Data_Folder,'\*.mat']);
@@ -182,30 +183,25 @@ p_rt=cell(2,1);
 p_lb=cell(2,1);
 p_rb=cell(2,1);
 ey=cell(2,1); 
-clear Rx Tx X Y measurements f
+clear Rx Tx data
 mkdir(Raw_Data_Folder,'\PANEL_FILES_ALIGNED\')
 files=dir([Raw_Data_Folder,'\PANEL_FILES_RAW\*.MAT']);
-for i=1:length(files)
+for i=1:length(files) 
     file_in=[Raw_Data_Folder,'\PANEL_FILES_RAW\',files(i).name];
-    load(file_in);  %% Load the near-field scan
+    data=load(file_in);  %% Load the near-field scan
 
-sampdist=(abs(X(1,1)-X(1,2)))/1000; %NFS sampling period
+sampdist=(abs(data.X(1,1)-data.X(1,2)))/1000; %NFS sampling period
 for loop=1:1:2
    
         figure(4); 
-%       range=[-0.0475, -0.0525]; %%back-propagation distance for plane 1 (in meters) - this one is physically measured for the scan
-        range=[-0.062, -0.068]; %%back-propagation distance for plane 1 (in meters) - this one is physically measured for the scan
-           
-%          ey{loop}=bp(measurements(:,:,:,1),X,Y,range(loop)); %% ey is the summed up back-propagated field - all frequencies and all polarizations
-%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!        
-        %!!! use single polarization to find fiducials
-        ey{loop}=bp(measurements,X,Y,range(loop));
+        range=[-0.063, -0.068]; %%back-propagation distance for plane 1 (in meters) - this one is physically measured for the scan           
+        ey{loop}=bp(data.measurements,data.X,data.Y,range(loop));
         
         %yy=X/1000; 
         %zz=Y/1000;
         
-        yy=(X-mean(mean(X,1),2))/1000; 
-        zz=(Y-mean(mean(Y,1),2))/1000;
+        yy=(data.X-mean(mean(X,1),2))/1000; 
+        zz=(data.Y-mean(mean(Y,1),2))/1000;
         
         xx=range(loop)*ones(size(yy));
         %plot
@@ -224,13 +220,12 @@ for loop=1:1:2
         % process specific panel
            figure(5); 
            
-%          [search_fields, search_pos, fid_exact, panel_type] = processMCPanel(ey{loop},xx, yy, zz);
            [search_fields, search_pos, fid_exact, panel_type] = processSlottedMCPanel(ey{loop},xx, yy, zz);
         
 %%%%%%%%%%%%%%%%%%%%%%%% For RX PANEL %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-fiducial_range=0.015; % fiducial guessed to be within this range
+fiducial_range=0.01; % fiducial guessed to be within this range
 
 search_region = fiducial_region(search_fields,search_pos, fid_exact,fiducial_range);
 
@@ -381,29 +376,99 @@ A=A';
 T=V*U';
 
 % apply the rotation ========================================================
-fmax=max(f);
-fmin=min(f);
+fmax=max(data.f);
+fmin=min(data.f);
 
-[ry,rx,nf,p]=size(measurements);
+[ry,rx,nf,p]=size(data.measurements);
 magaddsq=zeros(ry,rx);
-new_measurements=zeros(size(measurements));
+new_measurements=zeros(size(data.measurements));
 
 fieldsPrimed=[];
 for frno=1:nf
-wavl=c/f(frno);
-fieldsPrimed(:,:,1)=transfield(measurements(:,:,frno,1),[0,0,range(2)/wavl], wavl/sampdist,wavl/sampdist); %!!! sign of range(2) is implied (-) may need change later
-  fieldsPrimed(:,:,2)=transfield(measurements(:,:,frno,2),[0,0,range(2)/wavl], wavl/sampdist,wavl/sampdist);
-%  fieldsPrimed(:,:,2)=0; %!!!!!!!!!!!!!!!!!! note should take in both polarizations
+wavl=c/(data.f(frno));
+switch size(data.measurements(:,:,frno,:),4)
+    case 1
+        fieldsPrimed(:,:,1)=transfield(data.measurements(:,:,frno,1),...
+                                       [0,0,range(2)/wavl], ...
+                                       wavl/sampdist,wavl/sampdist); %!!! sign of range(2) is implied (-) may need change later
+        fieldsPrimed(:,:,2)=0; 
+    case 2
+        fieldsPrimed(:,:,1)=transfield(data.measurements(:,:,frno,1),[0,0,range(2)/wavl], wavl/sampdist,wavl/sampdist); %!!! sign of range(2) is implied (-) may need change later
+        fieldsPrimed(:,:,2)=transfield(data.measurements(:,:,frno,2),[0,0,range(2)/wavl], wavl/sampdist,wavl/sampdist);
+end   
 fieldsPrimed(:,:,3)=0;
 
-fieldsPrimed=rotfield(fieldsPrimed,T,wavl/sampdist,wavl/sampdist);
+ fieldsPrimed=rotfield(fieldsPrimed,T,wavl/sampdist,wavl/sampdist);%
+% fieldsPrimed=permute(rotfield(permute(fieldsPrimed,[2 1 3]),T,wavl/sampdist,wavl/sampdist),[2 1 3]);%!!!!!!!!!!!!!!!!!!! permute to put int rot funct form
 
-new_measurements(:,:,frno,1)=fieldsPrimed(:,:,1);
-new_measurements(:,:,frno,2)=fieldsPrimed(:,:,2);
+rot_measurements(:,:,frno,1)=fieldsPrimed(:,:,1);
+rot_measurements(:,:,frno,2)=fieldsPrimed(:,:,2); % do I
 
 magaddsq=magaddsq+sqrt(abs(fieldsPrimed(:,:,1)).^2+abs(fieldsPrimed(:,:,2)).^2);
 
 end
+
+% solve for minimum NFS distance
+deltarange=.0025;
+stepsize=.0001;
+focus_dist=-deltarange:stepsize:deltarange;
+ figure(101); clf; hold on; clear image FM;
+ subplot(2,2,1);
+ scatter3(xx(:),yy(:),zz(:),6,20*log10(magaddsq(:)),'filled')
+        axis image; colormap('hot');set(gcf,'color','w');
+       title(['initial guess', num2str(range(2))]);
+        xlabel('x'); ylabel('y'); zlabel('z'); axis equal; axis tight;
+        view(90,0); hold on;
+        drawnow;
+ 
+ for ii=1:numel(focus_dist)
+focus{ii}=bp(rot_measurements,data.X,data.Y,focus_dist(ii));
+
+%find best focus using laplacian
+FM{ii} = fmeasure(focus{ii}, 'LAPE',[]);
+
+%         subplot(1,numel(distance),loop); 
+         subplot(2,2,2); cla;
+        scatter3(xx(:),yy(:),zz(:),6,20*log10(abs(focus{ii}(:))),'filled')
+        axis image; colormap('hot');set(gcf,'color','w');
+       title(['Delta Offset', num2str(focus_dist(ii))]);
+        xlabel('x'); ylabel('y'); zlabel('z'); axis equal; axis tight;
+        view(90,0); hold on;
+        drawnow;
+ end
+merit=[FM{:}];
+[~, min_merit]=min(merit);
+[~, max_merit]=max(merit);
+
+subplot(2,2,2); cla;
+scatter3(xx(:),yy(:),zz(:),6,20*log10(abs(focus{max_merit}(:))),'filled')
+axis image; colormap('hot');set(gcf,'color','w');
+title(['Delta Offset', num2str(range(2)+focus_dist(max_merit))]);
+xlabel('x'); ylabel('y'); zlabel('z'); axis equal; axis tight;
+view(90,0); hold on;
+drawnow;
+ 
+subplot(2,2,3:4); 
+plot(focus_dist(:),merit)
+display(['minimum: ',num2str(focus_dist(min_merit))])
+display(['maximum: ',num2str(focus_dist(max_merit))])
+antenna_plane=focus_dist(max_merit);
+title(['maximum delta position: ', num2str(focus_dist(max_merit)), ' m'])
+
+for frno=1:nf
+wavl=c/(data.f(frno));
+
+        fieldsPrimed(:,:,1)=transfield(rot_measurements(:,:,frno,1),[0,0,antenna_plane/wavl], wavl/sampdist,wavl/sampdist); %!!! sign of range(2) is implied (-) may need change later
+        fieldsPrimed(:,:,2)=transfield(rot_measurements(:,:,frno,2),[0,0,antenna_plane/wavl], wavl/sampdist,wavl/sampdist);
+        fieldsPrimed(:,:,3)=0;
+
+antennaPlane_measurements(:,:,frno,1)=fieldsPrimed(:,:,1);
+antennaPlane_measurements(:,:,frno,2)=fieldsPrimed(:,:,2);
+
+magaddsq=magaddsq+sqrt(abs(fieldsPrimed(:,:,1)).^2+abs(fieldsPrimed(:,:,2)).^2);
+
+end
+% %%%%
 
 figure(7); clf;
 subplot(2,2,1) 
@@ -417,7 +482,7 @@ view(90,0); hold on;
 %calculate the translation
 % solve for translation ===================================================
 subplot(2,2,3)
-[search_fields, samePosition, ~, ~] = processMCPanel(magaddsq,xx, yy, zz);   
+[search_fields, samePosition, ~, ~] = processSlottedMCPanel(magaddsq,xx, yy, zz);   
 
 search_region=[]; yyy=[];zzz=[];E_lb=[]; E_rb=[]; E_lt=[];E_rt=[]; clear pos;
 [ search_region ] = fiducial_region(search_fields,samePosition, fid_exact,fiducial_range);
@@ -469,16 +534,15 @@ fid(1,:)=-(posPrime.left_b  -  [fid_exact.lb.y, fid_exact.lb.z]);
 fid(2,:)=-(posPrime.right_b -  [fid_exact.rb.y,fid_exact.rb.z]);
 fid(3,:)=-(posPrime.left_t  -  [fid_exact.lt.y, fid_exact.lt.z]);
 fid(4,:)=-(posPrime.right_t -  [fid_exact.rt.y,fid_exact.rt.z]);
-
-transvec=[mean(fid,1),0]; %note bp does X Y translation
+transvec=[mean(fid,1),0]; %note bp does X Y translation !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 magaddsq_final=zeros(ry,rx);
 for frno=1:nf
-wavl=c/f(frno);
+wavl=c/(data.f(frno));
 
 %%%!!!!!!!!
-fieldsPrimed(:,:,1)=transfield(new_measurements(:,:,frno,1), transvec/wavl, wavl/sampdist,wavl/sampdist); %!!! sign of range(2) is implied (-) may need change later
-fieldsPrimed(:,:,2)=transfield(new_measurements(:,:,frno,2), transvec/wavl, wavl/sampdist,wavl/sampdist);
+fieldsPrimed(:,:,1)=transfield(antennaPlane_measurements(:,:,frno,1), transvec/wavl, wavl/sampdist,wavl/sampdist); %!!! sign of range(2) is implied (-) may need change later
+fieldsPrimed(:,:,2)=transfield(antennaPlane_measurements(:,:,frno,2), transvec/wavl, wavl/sampdist,wavl/sampdist);
 fieldsPrimed(:,:,3)=0;
 
 new_measurements(:,:,frno,1)=fieldsPrimed(:,:,1);
@@ -488,10 +552,9 @@ magaddsq_final=magaddsq_final+sqrt(abs(fieldsPrimed(:,:,1)).^2+abs(fieldsPrimed(
 end
 fprintf(['Finished translating ', files(i).name ,' SHIFT = [', num2str(transvec),']\n']);
 
-
 figure(9); clf; search_region=[]; yyy=[];zzz=[];E_lb=[]; E_rb=[]; E_lt=[];E_rt=[]; posLast=posPrime;posPrime=[];%%%%%!!!!!!!!!!!!!!!It was figure(8)
 
-[search_fields, samePosition, ~, ~] = processMCPanel(magaddsq_final,xx, yy, zz);   
+[search_fields, samePosition, ~, ~] = processSlottedMCPanel(magaddsq_final,xx, yy, zz);   
 search_region = fiducial_region(search_fields,samePosition, fid_exact,fiducial_range);
 
 clf;
@@ -515,12 +578,13 @@ scatter3(search_region.lt.x(1),posPrime.right_t(1),posPrime.right_t(2),20,'g','*
 
 
 fid=zeros(4,2);
-
 fid(1,:)=-(posPrime.left_b  -  [fid_exact.lb.y, fid_exact.lb.z]);
 fid(2,:)=-(posPrime.right_b -  [fid_exact.rb.y,fid_exact.rb.z]);
 fid(3,:)=-(posPrime.left_t  -  [fid_exact.lt.y, fid_exact.lt.z]);
 fid(4,:)=-(posPrime.right_t -  [fid_exact.rt.y,fid_exact.rt.z]);
 mean(fid,1);
+final_transvec=[mean(fid,1),0]; %note bp does X Y translation
+fprintf(['Final delta offset: ', files(i).name ,' SHIFT = [', num2str(final_transvec),']\n']);
 % pause();
 drawnow
 
@@ -528,9 +592,19 @@ X=yy*1000;
 Y=zz*1000;
 
 measurements=new_measurements;
+f=data.f;
+
 save([Raw_Data_Folder,'\PANEL_FILES_ALIGNED\',files(i).name], 'measurements', 'X', 'Y', 'f');
  fprintf(['FINISHED ROTATING FILE: ',files(i).name(16:end-4),'.mat \n']);
 
+end
+%% save as effective dipoles
+mkdir(Raw_Data_Folder,'\EQUIV_DIPOLES\')
+files=dir([Raw_Data_Folder,'\PANEL_FILES_ALIGNED\*.MAT']);
+for i=1:numel(files)
+panel=import_scans([Raw_Data_Folder,'\PANEL_FILES_ALIGNED\',files(i).name],'Ex',1,'Ey', 2);
+save([Raw_Data_Folder,'\EQUIV_DIPOLES\',files(i).name], 'panel');
+ fprintf(['EQUIVALENT DIPOLE FILE: ',files(i).name(1:end-4),'.mat \n']);
 end
 
 %% Optical Scanning and panel placement

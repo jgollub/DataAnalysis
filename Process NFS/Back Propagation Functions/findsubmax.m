@@ -3,18 +3,18 @@
 %p = upsampling
 function [xp,yp]=findsubmax(func,p)
 
-n=4;
+n=10;
 pfunc=abs(upsamp(func,p));
-[rx,ry]=size(pfunc);
+[ry,rx]=size(pfunc);
 % rx
 % ry
-[xvals,xpos]=max(pfunc);
-[yvals,ypos]=max(xvals);
-yc=ypos-1;
-xc=xpos(ypos)-1;
+[yvals,ypos]=max(pfunc);
+[xvals,xpos]=max(yvals);
+xc=xpos-1;
+yc=ypos(xpos)-1;
 [xv,yv]=meshgrid(min(max(xc-n:xc+n,1),rx),min(max(yc-n:yc+n,1),ry));
-ind=yv*rx+xv+1;
-[xx,yy]=ndgrid((-n:n),(-n:n));
+ind=yv*ry+xv+1;
+[xx,yy]=meshgrid((-n:n),(-n:n));
 rr=sqrt(xx.^2+yy.^2);
 rr=(rr<=n).*(pi*rr/(2*(n+1)));
 windw=cos(rr).*pfunc(ind);
