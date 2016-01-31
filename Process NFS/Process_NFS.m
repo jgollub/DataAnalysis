@@ -4,7 +4,7 @@
 
 %% clean NFS  data and save as ".mat" file
 
-Raw_Data_Folder='D:\MC Slotted Panels\Version2_1_12_2016\Near_Field_Scans\';
+Raw_Data_Folder='D:\MC Slotted Panels\Version2_1_30_2016\';
 
 files=dir([Raw_Data_Folder,'\*.csv']);
 
@@ -56,7 +56,7 @@ xlabel('frequency'); ylabel('phase'); legend('measured','analytic');
 end
 
 %% NSI cable phase response (taken from 4 pt measurement)
-file_in='D:\MC Slotted Panels\Version2_1_12_2016\cable_measurement\cable_today.csv';
+file_in='D:\MC Slotted Panels\Version2_1_30_2016\cable_response\cable.csv';
 [directory,name,ext]=fileparts(file_in);
 
 mkdir([Raw_Data_Folder,'\NSI_CABLE\']);
@@ -200,8 +200,8 @@ for loop=1:1:2
         %yy=X/1000; 
         %zz=Y/1000;
         
-        yy=(data.X-mean(mean(X,1),2))/1000; 
-        zz=(data.Y-mean(mean(Y,1),2))/1000;
+        yy=(data.X-mean(mean(data.X,1),2))/1000; 
+        zz=(data.Y-mean(mean(data.Y,1),2))/1000;
         
         xx=range(loop)*ones(size(yy));
         %plot
@@ -602,8 +602,50 @@ end
 mkdir(Raw_Data_Folder,'\EQUIV_DIPOLES\')
 files=dir([Raw_Data_Folder,'\PANEL_FILES_ALIGNED\*.MAT']);
 for i=1:numel(files)
-panel=import_scans([Raw_Data_Folder,'\PANEL_FILES_ALIGNED\',files(i).name],'Ex',1,'Ey', 2);
-save([Raw_Data_Folder,'\EQUIV_DIPOLES\',files(i).name], 'panel');
+% panel=import_scans([Raw_Data_Folder,'\PANEL_FILES_ALIGNED\',files(i).name],'Ex',1,'Ey', 2);
+panel=import_scans([Raw_Data_Folder,'\PANEL_FILES_ALIGNED\',files(i).name],'Ex',1);
+
+file='Rx_06.mat';
+load(file);
+dipoles=panel.dipoles;
+feedLocs=panel.feedLocs;
+numfeeds=panel.numfeeds;
+y=panel.y;
+z=panel.z; 
+f=panel.f; 
+type=panel.type; 
+u=panel.u; 
+v=panel.v; 
+Size_y=panel.Size_y; 
+Size_z=panel.Size_z; 
+ElementSize_y=panel.ElementSize_y; 
+ElementSize_z=panel.ElementSize_z; 
+fstart=panel.fstart; 
+fstop=panel.fstop; 
+dims=panel.dims; 
+x=panel.x; 
+n=[1;0;0]; 
+save([Raw_Data_Folder,'\EQUIV_DIPOLES\',files(i).name],...
+    'dipoles',...
+    'feedLocs',...
+    'numfeeds',...
+    'y',...
+    'z',...
+    'f',...
+    'type',...
+    'u',...
+    'v',...
+    'Size_y',...
+    'Size_z',...
+    'ElementSize_y',...
+    'ElementSize_z',...
+    'fstart',...
+    'fstop',...
+    'dims',...
+    'x',...
+    'n');
+
+% save([Raw_Data_Folder,'\EQUIV_DIPOLES\',files(i).name], 'panel');
  fprintf(['EQUIVALENT DIPOLE FILE: ',files(i).name(1:end-4),'.mat \n']);
 end
 

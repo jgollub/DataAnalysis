@@ -34,7 +34,7 @@ if ischar(data)
 end
 
 %assign data to correct polarization    
-if (p.Results.Ex==p.Results.Ey | (isnan(p.Results.Ey) & isnan(p.Results.Ez)));
+if (p.Results.Ex==p.Results.Ey | (isnan(p.Results.Ey) & isnan(p.Results.Ex)));
     error('you have set Ey and Ez to the same value or neither have been assigned')
 end
 
@@ -90,6 +90,10 @@ panel.x = zeros(panel.dims);
 
     tmp_y = zeros([numel(panel.f), size(panel.y)]);
     tmp_z = zeros([numel(panel.f), size(panel.y)]);
+    panel.dipoles.x=tmp_y;
+    panel.dipoles.y=tmp_y;
+    panel.dipoles.z=tmp_y;
+
     for fi = 1:length(panel.f)
         if ~isnan(p.Results.Ey)
             tmp_y(fi,:,:) = -2i*A0/(u0*2*pi*panel.f(fi))*data_Ey.measurements(:,:,fi);
@@ -105,15 +109,15 @@ panel.x = zeros(panel.dims);
     end
     
     if ~isnan(p.Results.Ey)
-        panel.dipoles.y = cat(1, panel.dipoles.y, tmp_y);
+        panel.dipoles.y = tmp_y; 
     end
     if  ~isnan(p.Results.Ex)
-        panel.dipoles.z = cat(1, panel.dipoles.z, tmp_z);
+        panel.dipoles.z = tmp_z;
     end
 
+%     panel.dipoles.x = zeros(size(panel.dipoles.y));
 
-panel.dipoles.x = zeros(size(panel.dipoles.y));
-
+    
 if p.Results.Renormalize
 %     kappa = repmat(sqrt((power_calc(panel, 'self'))), [1 size(panel.x)]);
     kappa = sqrt(mean(power_calc(panel, 'self'))); %was 'nearest'
