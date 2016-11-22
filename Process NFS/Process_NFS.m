@@ -3,7 +3,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% clean NFS  data and save as ".mat" file
-Raw_Data_Folder='D:\Dropbox (Duke Electric & Comp)\MetaImager Data\Panel Characterization\Slotted_MC';
+Raw_Data_Folder='D:\Dropbox (Duke Electric & Comp)\MetaImager Data\Near Field Scans\DEMO_B_NEAR_FIELD_SCANS';
 files=dir([Raw_Data_Folder,'\*.csv']);
 
 for i=1:length(files)
@@ -18,7 +18,7 @@ debug_on=1;
 
 %Output frequencies
 f_num=101;
-f=linspace(18.0e9,26.5e9,f_num);
+f=linspace(17.5e9,26.5e9,f_num);
 
 %constants
 c=299792458;    % [m/s] Speed of light
@@ -30,7 +30,7 @@ files=dir([Raw_Data_Folder,'\*.mat']);
 NSI_data=load([Raw_Data_Folder,'\',files(1).name]); %load representitive file to frequency ecetera for processing
 %% Probe phase response (NSI system specific)
 %choose probe correction
-use_case=4;
+use_case=3;
 
 NSI_probe_response=probePhase(f,use_case);
 
@@ -54,7 +54,7 @@ xlabel('frequency'); ylabel('phase'); legend('measured','analytic');
 end
 
 %% NSI cable phase response (taken from 4 pt measurement)
-file_in='C:\Users\lab\Documents\MidImager_Data\NFS_data\NSI_CABLE_MEASURED\cable.csv';
+file_in='D:\Dropbox (Duke Electric & Comp)\MetaImager Data\Near Field Scans\DEMO_B_NEAR_FIELD_SCANS\Cable_Response\cable_101.csv';
 [directory,name,ext]=fileparts(file_in);
 
 mkdir([Raw_Data_Folder,'\NSI_CABLE\']);
@@ -194,8 +194,9 @@ for loop=1:1:2
    
         figure(4); 
 %       range=[-0.0475, -0.0525]; %%back-propagation distance for plane 1 (in meters) - this one is physically measured for the scan
-%         range=[-0.0595, -0.0645]; %%back-propagation distance for plane 1 (in meters) - this one is physically measured for the scan
-        range=[-0.0595, -0.06];
+%       range=[-0.0595, -0.0645]; %%back-propagation distance for plane 1 (in meters) - this one is physically measured for the scan
+        range=[-0.0505, -0.0555]; %%back-propagation distance for plane 1 (in meters) - this one is physically measured for the scan
+
         ey{loop}=bp(measurements,X,Y,range(loop));
         
         %yy=X/1000; 
@@ -226,8 +227,8 @@ for loop=1:1:2
         
 %%%%%%%%%%%%%%%%%%%%%%%% For RX PANEL %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-fiducial_range=0.015; % fiducial guessed to be within this range
+% fiducial_range=0.015; % fiducial guessed to be within this range
+fiducial_range=0.01; % fiducial guessed to be within this range
 
 search_region = fiducial_region(search_fields,search_pos, fid_exact,fiducial_range);
 

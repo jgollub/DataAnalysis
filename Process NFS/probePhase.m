@@ -36,13 +36,13 @@ switch use_case
         phase_correction=abs(measured).*sqrt(exp(-1.0j*angle(measured)));
         
     case 2
-        probe_Measurement_Path='D:\Dropbox (Duke Electric & Comp)\MetaImager Data (1)\Scans\TEMP\probephase.mat'; 
+        probe_Measurement_Path='D:\MetaImager\Experimental Virtualizer\Aesthetic Cover\Near Field Scans\TEMP\probephase.mat'; 
         load(probe_Measurement_Path)
         
         phase_correction=exp(1.0i*probe_phase_meas);
     case 3
  
-        file='C:\Users\lab\Documents\data\response\nsi\nsi_wr42_17p5-26p5GHz_801pts.mat'; 
+        file='D:\MetaImager\response\response\nsi\nsi_wr42_17p5-26p5GHz_801pts.mat'; 
 
         probe_phase=load(file);
         probe_phase.r=-probe_phase.r;
@@ -55,7 +55,7 @@ switch use_case
         phase_correction=probe_phase.r(f_location);
         
     case 4
-         file='C:\Users\lab\Documents\data\response\nsi\nsi_wr42_18p0-26p5GHz_801pts.mat'; 
+         file='D:\MetaImager\response\response\nsi\nsi_wr42_18p0-26p5GHz_801pts.mat'; 
          probe_phase=load(file);
          probe_phase.r=-probe_phase.r; %!!!!!!!!!!!!!!!!!! added neg sign because file is off by pi from 17.5 file
         
