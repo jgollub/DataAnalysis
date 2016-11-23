@@ -56,7 +56,6 @@ xlabel('frequency'); ylabel('phase'); legend('measured','analytic');
 end
 
 %% NSI cable phase response (taken from 4 pt measurement)
-
 file_in='D:\Dropbox (Duke Electric & Comp)\MetaImager Data\Near Field Scans\DEMO_B_NEAR_FIELD_SCANS\Cable_Response\cable_101.csv';
 
 [directory,name,ext]=fileparts(file_in);
@@ -204,22 +203,24 @@ mkdir(Raw_Data_Folder,'\PANEL_FILES_ALIGNED\')
 files=dir([Raw_Data_Folder,'\PANEL_FILES_RAW\*.MAT']);
 for i=1:length(files) 
     file_in=[Raw_Data_Folder,'\PANEL_FILES_RAW\',files(i).name];
-    load(file_in);  %% Load the near-field scan
+    data=load(file_in);  %% Load the near-field scan
 
-sampdist=(abs(X(1,1)-X(1,2)))/1000; %NFS sampling period
+sampdist=(abs(data.X(1,1)-data.X(1,2)))/1000; %NFS sampling period
 for loop=1:1:2
    
+
 %       range=[-0.0475, -0.0525]; %%back-propagation distance for plane 1 (in meters) - this one is physically measured for the scan
 %       range=[-0.0595, -0.0645]; %%back-propagation distance for plane 1 (in meters) - this one is physically measured for the scan
         range=[-0.0505, -0.0555]; %%back-propagation distance for plane 1 (in meters) - this one is physically measured for the scan
 
         ey{loop}=bp(measurements,X,Y,range(loop));
+
         
         %yy=X/1000; 
         %zz=Y/1000;
         
-        yy=(X-mean(mean(X,1),2))/1000; 
-        zz=(Y-mean(mean(Y,1),2))/1000;
+        yy=(data.X-mean(mean(data.X,1),2))/1000; 
+        zz=(data.Y-mean(mean(data.Y,1),2))/1000;
         
         xx=range(loop)*ones(size(yy));
         %plot
@@ -236,7 +237,9 @@ for loop=1:1:2
         view(90,0); hold on;
 
         % process specific panel
+
            figure(fig_5); 
+
            [search_fields, search_pos, fid_exact, panel_type] = processSlottedMCPanel(ey{loop},xx, yy, zz);
         
 %%%%%%%%%%%%%%%%%%%%%%%% For RX PANEL %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -394,29 +397,33 @@ A=A';
 T=V*U';
 
 % apply the rotation ========================================================
-fmax=max(f);
-fmin=min(f);
+fmax=max(data.f);
+fmin=min(data.f);
 
-[ry,rx,nf,p]=size(measurements);
+[ry,rx,nf,p]=size(data.measurements);
 magaddsq=zeros(ry,rx);
-new_measurements=zeros(size(measurements));
+new_measurements=zeros(size(data.measurements));
 
 fieldsPrimed=[];
 for frno=1:nf
+    
 wavl=c/(f(frno));
 switch size(measurements(:,:,frno,:),4)
+
     case 1
-        fieldsPrimed(:,:,1)=transfield(measurements(:,:,frno,1),...
+        fieldsPrimed(:,:,1)=transfield(data.measurements(:,:,frno,1),...
                                        [0,0,range(2)/wavl], ...
                                        wavl/sampdist,wavl/sampdist); %!!! sign of range(2) is implied (-) may need change later
         fieldsPrimed(:,:,2)=0; 
     case 2
-        fieldsPrimed(:,:,1)=transfield(measurements(:,:,frno,1),[0,0,range(2)/wavl], wavl/sampdist,wavl/sampdist); %!!! sign of range(2) is implied (-) may need change later
-        fieldsPrimed(:,:,2)=transfield(measurements(:,:,frno,2),[0,0,range(2)/wavl], wavl/sampdist,wavl/sampdist);
+        fieldsPrimed(:,:,1)=transfield(data.measurements(:,:,frno,1),[0,0,range(2)/wavl], wavl/sampdist,wavl/sampdist); %!!! sign of range(2) is implied (-) may need change later
+        fieldsPrimed(:,:,2)=transfield(data.measurements(:,:,frno,2),[0,0,range(2)/wavl], wavl/sampdist,wavl/sampdist);
 end   
 fieldsPrimed(:,:,3)=0;
 
+
 fieldsPrimed=rotfield(fieldsPrimed,T,wavl/sampdist,wavl/sampdist);%
+
 % fieldsPrimed=permute(rotfield(permute(fieldsPrimed,[2 1 3]),T,wavl/sampdist,wavl/sampdist),[2 1 3]);%!!!!!!!!!!!!!!!!!!! permute to put int rot funct form
 
 rot_measurements(:,:,frno,1)=fieldsPrimed(:,:,1);
@@ -440,6 +447,7 @@ figure(fig_6); clf; hold on; clear image FM;
         drawnow;
  
  for ii=1:numel(focus_dist)
+
 focus{ii}=bp(rot_measurements,X,Y,focus_dist(ii));
 
 %find best focus using laplacian
@@ -474,6 +482,7 @@ antenna_plane=focus_dist(max_merit);
 title(['maximum delta position: ', num2str(focus_dist(max_merit)), ' m'])
 
 for frno=1:nf
+
 wavl=c/(f(frno));
 
         fieldsPrimed(:,:,1)=transfield(rot_measurements(:,:,frno,1),[0,0,antenna_plane/wavl], wavl/sampdist,wavl/sampdist); %!!! sign of range(2) is implied (-) may need change later
@@ -556,6 +565,7 @@ transvec=[mean(fid,1),0]; %note bp does X Y translation !!!!!!!!!!!!!!!!!!!!!!!!
 
 magaddsq_final=zeros(ry,rx);
 for frno=1:nf
+
 wavl=c/(f(frno));
 
 %%%!!!!!!!!
@@ -569,6 +579,7 @@ magaddsq_final=magaddsq_final+sqrt(abs(fieldsPrimed(:,:,1)).^2+abs(fieldsPrimed(
 
 end
 fprintf(['Finished translating ', files(i).name ,' SHIFT = [', num2str(transvec),']\n']);
+
 
 figure(fig_8); clf; search_region=[]; yyy=[];zzz=[];E_lb=[]; E_rb=[]; E_lt=[];E_rt=[]; posLast=posPrime;posPrime=[];%%%%%!!!!!!!!!!!!!!!It was figure(8)
 
@@ -613,6 +624,7 @@ X=yy*1000;
 Y=zz*1000;
 
 measurements=new_measurements;
+
 f=f;
 
 save([Raw_Data_Folder,'\PANEL_FILES_ALIGNED\',files(i).name], 'measurements', 'X', 'Y', 'f');
