@@ -625,10 +625,8 @@ Y=zz*1000;
 
 measurements=new_measurements;
 
-f=f;
-
 save([Raw_Data_Folder,'\PANEL_FILES_ALIGNED\',files(i).name], 'measurements', 'X', 'Y', 'f');
- fprintf(['FINISHED ROTATING FILE: ',files(i).name(16:end-4),'.mat \n']);
+fprintf(['FINISHED ROTATING FILE: ',files(i).name(16:end-4),'.mat \n']);
 
 end
 %% save as effective dipoles
@@ -636,10 +634,8 @@ mkdir(Raw_Data_Folder,'\EQUIV_DIPOLES\')
 files=dir([Raw_Data_Folder,'\PANEL_FILES_ALIGNED\*.MAT']);
 for i=1:numel(files)
 % panel=import_scans([Raw_Data_Folder,'\PANEL_FILES_ALIGNED\',files(i).name],'Ex',1,'Ey', 2);
-panel=import_scans([Raw_Data_Folder,'\PANEL_FILES_ALIGNED\',files(i).name],'Ex',1);
 
-file='Rx_06.mat';
-load(file);
+panel=import_scans([Raw_Data_Folder,'\PANEL_FILES_ALIGNED\',files(i).name],'Ex',1);
 dipoles=panel.dipoles;
 feedLocs=panel.feedLocs;
 numfeeds=panel.numfeeds;
@@ -657,7 +653,13 @@ fstart=panel.fstart;
 fstop=panel.fstop; 
 dims=panel.dims; 
 x=panel.x; 
-n=[1;0;0]; 
+n=[1;0;0];
+
+%Null Transformations for Parker's code
+R=eye(3);
+T=[0;0;0];
+
+
 save([Raw_Data_Folder,'\EQUIV_DIPOLES\',files(i).name],...
     'dipoles',...
     'feedLocs',...
@@ -676,7 +678,10 @@ save([Raw_Data_Folder,'\EQUIV_DIPOLES\',files(i).name],...
     'fstop',...
     'dims',...
     'x',...
-    'n');
+    'n',...
+    'R',...
+    'T'...
+);
 
 % save([Raw_Data_Folder,'\EQUIV_DIPOLES\',files(i).name], 'panel');
  fprintf(['EQUIVALENT DIPOLE FILE: ',files(i).name(1:end-4),'.mat \n']);
