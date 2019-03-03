@@ -1,22 +1,22 @@
 %% parameters for panel data taken from NFS
 c=3e8;
-% 
-% load('D:\Dropbox (Duke Electric & Comp)\MetaImager Data\Near Field Scans\SemiRigid 101pts 2014-04\scans\A1.mat')
-% A1data=data;
-% clear data;
-% freqnum=101;
-% f=A1data.f;
-% 
-% y_apt=-A1data.X*1e-3;  %neg sign for import
-% z_apt=A1data.Y*1e-3;
-% 
-% yn_apt=numel(y_apt(1,:));
-% zn_apt=numel(z_apt(:,1));
-% 
-% ymin=y_apt(1,1);
-% ymax=y_apt(1,end);
-% zmin=z_apt(1,1);
-% zmax=z_apt(end,1);
+
+load('D:\Dropbox (Duke Electric & Comp)\MetaImager Data\Near Field Scans\SemiRigid 101pts 2014-04\scans\A1.mat')
+A1data=data;
+clear data;
+freqnum=101;
+f=A1data.f;
+
+y_apt=-A1data.X*1e-3;  %neg sign for import
+z_apt=A1data.Y*1e-3;
+
+yn_apt=numel(y_apt(1,:));
+zn_apt=numel(z_apt(:,1));
+
+ymin=y_apt(1,1); 
+ymax=y_apt(1,end);
+zmin=z_apt(1,1);
+zmax=z_apt(end,1);
 
 dy=abs(y_apt(1,2)-y_apt(1,1));
 dz=(z_apt(2,1)-z_apt(1,1));
@@ -178,8 +178,6 @@ PSFspace=[];
 PSFfreq=[];
 for ifeed=1:feeds
 for ifreq=1:numel(f)
-%FTpanelA1(:,:,ifreq,ifeed)=ifftshift(fft2(fftshift(A1data.measurements(:,:,ifreq,ifeed))))*dy*dz;
-%fix here need to find fields from panels
 FTpanelA1(:,:,ifreq,ifeed)=ifftshift(fft2(fftshift(A1data.measurements(:,:,ifreq,ifeed))))*dy*dz;
 
 % %apply phase conjugation

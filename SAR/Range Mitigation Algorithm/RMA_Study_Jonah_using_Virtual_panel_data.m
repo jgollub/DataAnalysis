@@ -1,7 +1,7 @@
 %% parameters for panel data taken from NFS
 c=3e8;
-
-load('D:\Dropbox (Duke Electric & Comp)\MetaImager Data\Near Field Scans\SemiRigid 101pts 2014-04\scans\A1.mat')
+% 
+load('D:\Dropbox (Duke Electric & Comp)\MetaImager Data\Near Field Scans\RevA4\6_feeds_NFS-29-Jan-2015.mat')
 A1data=data;
 clear data;
 freqnum=101;
@@ -61,7 +61,8 @@ dz=.005;
 
 panel = create_panel('fsweep',f,'SizeY',SizeY,'SizeZ',SizeZ,'ElementSizeY', ...
     dy, 'ElementSizeZ', dz,'Q',Q);
-
+panel.u=[0; 1; 0]; 
+panel.v=[0; 0; 1];
 panel =panel_feed(panel,'type', 'circular','feedLocs',feeds);
 
 probe = create_panel('type', 'probe', 'SizeY', .012, 'SizeZ', .012,...
@@ -89,7 +90,7 @@ target=BlockTarget(x_offset, 0, width, width, target_res/6, width);
 % target.xmat(~any(target.shape,2),:)=[];
 % target.xmat(:,~any(target.shape,1))=[];
 
-[locs, coord_grid] = test_space(x_offset_recon,width*6, y_offset,...
+[locs, coord_grid] = test_space2(x_offset_recon,width*6, y_offset,...
     6*width,z_offset, 6*width, target_res);
 
 sigma = ones(size(target.locs(:,1)));
@@ -178,6 +179,8 @@ PSFspace=[];
 PSFfreq=[];
 for ifeed=1:feeds
 for ifreq=1:numel(f)
+%FTpanelA1(:,:,ifreq,ifeed)=ifftshift(fft2(fftshift(A1data.measurements(:,:,ifreq,ifeed))))*dy*dz;
+%fix here need to find fields from panels
 FTpanelA1(:,:,ifreq,ifeed)=ifftshift(fft2(fftshift(A1data.measurements(:,:,ifreq,ifeed))))*dy*dz;
 
 % %apply phase conjugation
