@@ -7,7 +7,7 @@
 %% load data and set parameters
 c=2.99792458*10^8;
 
-% data
+% data 401 freq pts
 % load('C:\Users\Jonah Gollub\Downloads\drill_data.mat');
 % load('D:\Dropbox (Duke Electric & Comp)\Through Wall\9GHz-401pts\D_38cmPastWall_60X60cm_WallMeasSeries_14-Feb-2019_3_32.mat');
 % load('D:\Dropbox (Duke Electric & Comp)\Through Wall\9GHz-401pts\Saw_46cmAway_60X60cm_CorrectAlign_09-Feb-2019_4_59.mat');
@@ -15,7 +15,7 @@ c=2.99792458*10^8;
 
 % load('D:\Dropbox (Duke Electric & Comp)\Through Wall\9GHz-401pts\2By4_InsideWall_60X60cm_WallMeasSeries_21-Feb-2019_2_56.mat');
 % load('D:\Dropbox (Duke Electric & Comp)\Through Wall\9GHz-401pts\Baseline_InsideWall_60X60cm_RealWallMeasSeries_23-Feb-2019_1_29.mat');
-  load('D:\Dropbox (Duke Electric & Comp)\Through Wall\9GHz-401pts\Plywood_InsideWall_60X60cm_RealWallMeasSeries_24-Feb-2019_2_56.mat');
+%   load('D:\Dropbox (Duke Electric & Comp)\Through Wall\9GHz-401pts\Plywood_InsideWall_60X60cm_RealWallMeasSeries_24-Feb-2019_2_56.mat');
 
 % load('D:\Dropbox (Duke Electric & Comp)\Through Wall\9GHz-401pts\Drywall_InsideWall_60X60cm_RealWallMeasSeries_25-Feb-2019_19_40.mat');
 % load('D:\Dropbox (Duke Electric & Comp)\Through Wall\9GHz-401pts\HighPowerUnLeveled_Drywall_InsideWall_60X60cm_RealWallMeasSeries_26-Feb-2019_6_13.mat');
@@ -25,35 +25,80 @@ c=2.99792458*10^8;
 % load('D:\Dropbox (Duke Electric & Comp)\Through Wall\9GHz-401pts\ShiftedRight_HighPowerUnLeveled_Drywall_InsideWall_60X60cm_RealWallMeasSeries_27-Feb-2019_4_48.mat');
 % load('D:\Dropbox (Duke Electric & Comp)\Through Wall\9GHz-401pts\ShiftedRight_wDryWall_HighPowerUnLeveled_Drywall_InsideWall_60X60cm_RealWallMeasSeries_27-Feb-2019_21_13.mat');
 
+%101 freq  pts
+%  load('D:\Dropbox (Duke Electric & Comp)\Through Wall\9GHz-401pts\Fiducial_wTwosidedDryWall_HighPowerUnLeveled_Drywall_InsideWall_60X60cm_RealWallMeasSeries_01-Mar-2019_18_9.mat');
+% load('D:\Dropbox (Duke Electric & Comp)\Through Wall\9GHz-401pts\MonsterScan_Fiducial_wTwosidedDryWall_HighPowerUnLeveled_Drywall_InsideWall_60X60cm_RealWallMeasSeries_04-Mar-2019_2_46.mat');
+load('D:\Dropbox (Duke Electric & Comp)\Through Wall\9GHz-401pts\TheWall_HighPowerUnLeveled_Drywall_InsideWall_60X60cm_RealWallMeasSeries_05-Mar-2019_3_22.mat');
+
+
+% Measurement positions
+
+ 
+ 
 %choose object position; Choose frequency points to use. 
 z_offset=.56;
-pick=logical((data.f>17E9).*(data.f<27E9));
 
-measurements=data.measurements(:,:, pick);
+%freq range
+freqMin=17.5E9;
+freqMax=26.5E9;
+
+pick=logical((data.f>=freqMin).*(data.f<=freqMax)).';
 f=data.f(pick);
 BW=f(end)-f(1);
 
-% Measurement positions
-X=data.X/1000; 
+X=data.X/1000;
+Y=data.Y/1000;
+
 dx=abs(X(1,2)-X(1,1));
+%x range
+% xMin =-.3%-inf;
+% xMax = .3%inf;
+xMin =  -inf;
+xMax =   inf;
+
+
+xRange = logical((X(1,:)>=xMin).*(X(1,:)<=xMax)).';
+
+%y range
+% yMin = -.3%-inf;
+% yMax =  .3%inf;
+yMin = -inf;
+yMax =  inf;
+yRange = logical((Y(:,1)>=yMin).*(Y(:,1)<=yMax));
+
+
+X=X(yRange,xRange);
+Y=Y(yRange,xRange);
+
 Lx=X(1,end)-X(1,1);
 [ynum,xnum]=size(X);
 
-Y=data.Y/1000;
 dy=abs(Y(2,1)-Y(1,1));
 Ly=Y(end,1)-Y(1,1);
 
-clear data;
+%measurements
+measurements=data.measurements(yRange,xRange, pick);
+
+
 %subtract background
 %   load('D:\Dropbox (Duke Electric & Comp)\Through Wall\9GHz-401pts\TheWall_35cmAway_60X60cm_WallMeasSeries_13-Feb-2019_1_1');
  
 %correct for probe phase
 cal=load('C:\Users\Jonah Gollub\Documents\code\data Analysis\SAR\Calibration Data\extractedHornCalRad2019-2-18.mat');
-if f==cal.f(pick)
- measurements=(measurements)./exp(1j*2*cal.phaseCalData(pick));
- error('cal frequencies not contained in measurements') 
+
+for ii=1:numel(f)
+indxTemp(ii)=find(cal.f==f(ii));
 end
 
+measurements=(measurements)./repmat(permute(exp(1j*2*cal.phaseCalData(indxTemp)),[3,2,1]),size(measurements,1),size(measurements,2));
+
+% if f==cal.f(pick)
+%  measurements=(measurements)./exp(1j*2*cal.phaseCalData(pick));
+%  error('cal frequencies not contained in measurements') 
+% end
+
+
+clear data;
 %initilize variables
 k =[]; kux = []; kuy =[]; kuz = []; pad = []; Sxy = [];
 %% Perform RMA algorithm
@@ -78,17 +123,27 @@ k =[]; kux = []; kuy =[]; kuz = []; pad = []; Sxy = [];
 % upsample in x and y
 
 pad=2^nextpow2(max(numel(X(1,:)),numel(Y(:,1))));
-pad=2^7;
+%   pad=2^8;
 
-Lx_pad=dx*(pad-1); 
-Ly_pad=dy*(pad-1);
+% Lx_pad=dx*(pad-1); 
+% Ly_pad=dy*(pad-1);
+
+Lx_pad=dx*(size(measurements,2)-1); 
+Ly_pad=dy*(size(measurements,1)-1);
+
+dx=Lx/(pad-1);
+dy=Ly/(pad-1);
 
 %calc free space k vector
 k=2*pi*f/c;
 k=repmat(permute(k,[1,3,2]),[pad,pad,1]);
 
-[kux,kuy,~]=meshgrid(-(2*pi)/(2*dx):2*pi/(Lx_pad):(2*pi)/(2*dx),...
-                     -(2*pi)/(2*dy):2*pi/(Ly_pad):(2*pi)/(2*dy),...
+% [kux,kuy,~]=meshgrid(-(2*pi)/(2*dx):2*pi/(Lx_pad):(2*pi)/(2*dx),...
+%                      -(2*pi)/(2*dy):2*pi/(Ly_pad):(2*pi)/(2*dy),...
+%                      1:numel(f));
+
+[kux,kuy,~]=meshgrid(linspace(-(2*pi)/(2*dx),(2*pi)/(2*dx),pad),...
+                     linspace(-(2*pi)/(2*dy),(2*pi)/(2*dy),pad),...
                      1:numel(f));
 
 %calculate plane wave decomposition (FFT). Note we have to be careful about
@@ -125,7 +180,16 @@ Sxy=padarray(Sxy,[floor((pad-size(measurements,1))/2), floor((pad-size(measureme
 kuz=sqrt((2*k).^2-kux.^2-kuy.^2);
 kuz=real(kuz); %!!!!!!!!!!!!!!!!!!! ignore evanescent fields
 
-Kz=linspace(min(kuz(:)),max(kuz(:)),4*size(measurements,3));
+kuzMin = min(kuz(:));
+kuzMax = max(kuz(:));
+
+%ensure sufficient sampling of Kz 
+minSampling = min(nonzeros(diff(kuz,1,3))); %only look end of matrix (high frequency region)
+numSampling = max(size(measurements,3),ceil((kuzMax-kuzMin)/minSampling)); %opt 1 (sample at minimum)
+numSampling = 2^nextpow2(numSampling); %opt 2 (sample at next power of 2)
+
+
+Kz=linspace(kuzMin,kuzMax,numSampling);
 
 % dt=c/(BW);
 % Kz=min(kuz(:)):4*pi/(c*dt):max(kuz(:));
@@ -140,11 +204,10 @@ for ii=1:size(kux,2)
     for jj=1:size(kuy,1)
      %           kuz(jj,ii,real(kuz(jj,ii,:))==0)=0;
         indx_vec = squeeze(squeeze(real(kuz(jj,ii,:))~=0));
-        if ~sum(indx_vec)==0
- 
+        if ~(sum(indx_vec)==0 || sum(indx_vec)==1) %check that there are enough points to interpolate
            Srmg(jj,ii,:)=interp1(squeeze(squeeze(kuz(jj,ii,indx_vec))),...
-                squeeze(Sxy(jj,ii,indx_vec)),...
-                Kz.','linear');
+                                 squeeze(Sxy(jj,ii,indx_vec)),...
+                                 Kz.','linear');
             
 %             %debug
 %             figure(3); cla; 
@@ -156,6 +219,21 @@ for ii=1:size(kux,2)
         end
     end
 end
+
+ii=44;
+jj=44;
+            %debug
+            figure(3); cla; 
+            plot(squeeze(squeeze(kuz(jj,ii,indx_vec))),squeeze(Sxy(jj,ii,indx_vec)))
+            hold on;            
+            Srmg(jj,ii,find(isnan(Srmg(jj,ii,:))))=0;
+            plot(real(Kz(:)).',squeeze(squeeze(Srmg(jj,ii,:))),'-o')
+            drawnow; 
+
+
+
+
+
 
 Srmg(find(isnan(Srmg))) = 0; %set all Nan values to 0
 
@@ -209,6 +287,7 @@ image=(abs(fxy)/max(abs(fxy(:))));
 % 
 %   % open the video writer
 % open(writerObj);
+
 % % write the frames to the video
 % for i=1:length(F)
 %     % convert the image to a frame
@@ -222,10 +301,10 @@ image=(abs(fxy)/max(abs(fxy(:))));
 %% plot 
 
 %labeling
-xx=linspace(-Lx_pad/2,Lx_pad/2,size(fxy,2));
-yy=linspace(-Ly_pad/2,Ly_pad/2,size(fxy,1));
+xx=linspace(-Lx/2,Lx/2,size(fxy,2));
+yy=linspace(-Ly/2,Ly/2,size(fxy,1));
 
- zz=linspace(-c*numel(f)/(2*BW)/2,c*numel(f)/(2*BW)/2,numel(f)*4);
+ zz=linspace(-c*numel(f)/(2*BW)/2,c*numel(f)/(2*BW)/2,numSampling);
 %  zz=linspace(0,c*numel(f)/(2*BW),numel(f));
 
     figure(1); cla; subplot(2,2,2); cla;
@@ -241,8 +320,8 @@ xmin=min(X(1,:));
 xmax=max(X(1,:));
 ymin=min(Y(:,1));
 ymax=max(Y(:,1));
-zmin=0.05;
-zmax=.25;
+zmin=.03;
+zmax=.15;
 
 subimage=image(yy>ymin & yy<ymax, xx>xmin & xx<xmax, zz>zmin & zz<zmax);
  subimage=subimage/max(subimage(:));
@@ -307,7 +386,7 @@ subimage=image(yy>ymin & yy<ymax, xx>xmin & xx<xmax, zz>zmin & zz<zmax);
 %     % convert the image to a frame
 %     frame = F(i) ;    
 %     writeVideo(writerObj, frame);
-l% end
+% end
 % % close the writer object
 % close(writerObj);
 
