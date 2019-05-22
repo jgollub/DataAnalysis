@@ -12,12 +12,17 @@ c=2.99792458*10^8;
 %parse inputs
 
 defaultPad=2^nextpow2(max(numel(X(1,:)),numel(Y(:,1))));
-ReconstructionTypes = {'RMA', 'RMA_GPU', 'gHF', 'SUM'}; %only base RMA working at the moment
+ReconstructionTypes = {'RMA', 'RMA_GPU', 'gHF'}; %only base RMA working at the moment
 
 p = inputParser;
 addOptional(p, 'Algorithm', 'RMA', @(x) find(strcmp(ReconstructionTypes,x)));
 addOptional(p, 'Pad', defaultPad, @(x) rem(x,1)==0);
 addOptional(p, 'z_offset', 0, @(x) isnumeric(x));
+
+%for gHF
+addOptional(p, 'gHF_xValues', X(1,:), @(x) ismatrix(x));
+addOptional(p, 'gHF_yValues', Y(:,1), @(x) ismatrix(x));
+addOptional(p, 'gHF_zValues', c/(2*(f(end)-f(1))), @(x) ismatrix(x));
 
 parse(p,varargin{:});
 
@@ -25,6 +30,10 @@ parse(p,varargin{:});
 pad      = p.Results.Pad;
 alg      = p.Results.Algorithm;
 z_offset = p.Results.z_offset;
+
+xvec = p.Results.gHF_xValues; 
+yvec = p.Results.gHF_yValues;
+zvec = p.Results.gHF_zValues;
 
 switch alg
     case 'RMA'
@@ -258,6 +267,37 @@ switch alg
         display(['Stolt Interpolation FFT = ', num2str(e2)]);
         display(['final 3D FFT            = ', num2str(e3)]);
         display(['']);
+    case 'gHF'
+        
+%% Reconstruct
+%reconstruction zone
+
+[xi,yi,zi] = meshgrid(xvec, yvec, zvec);
+
+kr=(2*pi*f/c).';
+
+fest=zeros(numel(xi),1);
+size_fest = size(fest);
+
+%H is too large to calculate directly, instead calc fest one element at a
+%time
+for ii=1:numel(xi)
+    
+    Di = sqrt((X(:)-xi(ii)).^2+(Y(:)-yi(ii)).^2 + zi(ii).^2).';
+    
+    %measurement matrix; note di is 1 x n and k is n x 1 vector
+    %calulate fest one row at a time (to conserve memory)
+    fii= single(((1./Di).*exp(-1j*kr.*Di)).*((1./Di).*exp(-1j*kr.*Di)));
+    
+    fest(ii) = fii(:)'*reshape(permute(measurements,[3, 1, 2]),[],1);
+    if mod(ii,100)==0;
+        display(['ii = ', num2str(ii), ' of ', num2str(size_fest)])
+    end
+end
+clear f_image;
+f_image=reshape(fest,length(yvec),length(xvec),length(zvec));
+f_image=abs(f_image)/max(abs(f_image(:)));
+
         
 end
 end

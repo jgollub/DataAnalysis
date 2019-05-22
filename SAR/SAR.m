@@ -411,7 +411,7 @@ yy=linspace(-Ly/2,Ly/2,size(image,1));
 
     figure(1); cla; subplot(2,2,2); cla;
     set(gcf,'color','white'); colormap('parula');
-    vol3d('Cdata',image.^1,'xdata',xx,'Ydata',yy,'Zdata',zz);
+    vol3d('Cdata',image.^1.5,'xdata',xx,'Ydata',yy,'Zdata',zz);
     axis equal; axis tight; view(3);
     zlabel('downrange (m)'); xlabel('x crossrange (m)');  ylabel('y crossrange (m)');
 
@@ -439,4 +439,65 @@ subimage=image(yy>ymin & yy<ymax, xx>xmin & xx<xmax, zz>zmin & zz<zmax);
     zlabel('downrange (m)'); xlabel(' x crossrange (m)');  ylabel('y crossrange (m)');
     axis equal; axis tight; view(180,-90); %view(180,0)
 
+%% Reconstruct g=Hf backprojection
+%reconstruction zone
 
+xvec = -0.3:0.0075:0.3;
+yvec = -0.3:0.0075:0.3;
+zvec = 0.45:0.015:0.7;
+
+[xi,yi,zi] = meshgrid(xvec, yvec, zvec);
+
+kr=(2*pi*f/c).';
+%generate H !!! too large keep in memory
+% H=zeros(length(kr)*numel(X),numel(xi(:)), 'single'); 
+
+% for ii=1:numel(X)
+% 
+%         Di = sqrt((X(ii)-xi(:)).^2+(Y(ii)-yi(:)).^2 + zi(:).^2).';
+%         
+%         %measurement matrix; note di is n x 1 and k is 1 x n vector
+%         H(1+(ii-1)*length(kr):ii*length(kr),:) =...
+%           single(((1./Di).*exp(-1j*kr.*Di)).*((1./Di).*exp(-1j*kr.*Di)));
+% 
+%       if mod(ii,1)==0;
+%           ii
+%       end
+% end 
+
+
+fest=zeros(numel(xi),1);
+size(fest)
+
+for ii=1:numel(xi)
+
+        Di = sqrt((X(:)-xi(ii)).^2+(Y(:)-yi(ii)).^2 + zi(ii).^2).';
+        
+        %measurement matrix; note di is 1 x n and k is n x 1 vector
+        %calulate fest one row at a time (to conserve memory)
+         fii= single(((1./Di).*exp(-1j*kr.*Di)).*((1./Di).*exp(-1j*kr.*Di)));
+
+          fest(ii) = fii(:)'*reshape(permute(measurements,[3, 1, 2]),[],1);
+      if mod(ii,100)==0;
+          ii
+      end
+end 
+clear f_image;
+f_image=reshape(fest,length(yvec),length(xvec),length(zvec));
+f_image=abs(f_image)/max(abs(f_image(:)));
+
+%% plot g=HF
+
+%labeling
+xx=xvec;
+yy=yvec;
+zz=zvec;
+%  zz=linspace(0,c*numel(f)/(2*BW),numel(f));
+
+    figure(1); cla; subplot(2,1,2); cla;
+    set(gcf,'color','white'); colormap('parula');
+    vol3d('Cdata',f_image.^1.5,'Xdata',xx,'Ydata',yy,'Zdata',zz);
+    axis equal; axis tight; view(180,-90);
+    zlabel('downrange (m)'); xlabel('x crossrange (m)');  ylabel('y crossrange (m)');
+
+     drawnow;

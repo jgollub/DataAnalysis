@@ -38,11 +38,14 @@ c=2.99792458*10^8;
  
  
 %choose object position; Choose frequency points to use. 
-z_offset=.56;
+z_offset=0.56;
 
 %freq range
 freqMin=17.5E9;
 freqMax=26.5E9;
+% freqMin=22.5E9;
+% freqMax=23.5E9;
+
 
 pick=logical((data.f>=freqMin).*(data.f<=freqMax)).';
 pick(2:2:end)=logical(0);%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
@@ -56,8 +59,8 @@ Y=data.Y/1000;
 
 dx=abs(X(1,2)-X(1,1));
 %x range
-% xMin =-.3%-inf;
-% xMax = .3%inf;
+% xMin =-.1%-inf;
+% xMax = .1%inf;
 xMin =  -inf;
 xMax =   inf;
 
@@ -65,10 +68,11 @@ xMax =   inf;
 xRange = logical((X(1,:)>=xMin).*(X(1,:)<=xMax)).';
 
 %y range
-% yMin = -.3%-inf;
-% yMax =  .3%inf;
+% yMin = -.1%-inf;
+% yMax =  .1%inf;
 yMin = -inf;
 yMax =  inf;
+
 yRange = logical((Y(:,1)>=yMin).*(Y(:,1)<=yMax));
 
 
@@ -99,7 +103,7 @@ measurements=(measurements)./repmat(permute(exp(1j*2*cal.phaseCalData(indxTemp))
 
 clear data;
 %initilize variables
-k =[]; kux = []; kuy =[]; kuz = []; pad = []; Sxy = [];
+% k =[]; kux = []; kuy =[]; kuz = []; pad = []; Sxy = [];
 
 %% Perform RMA algorithm (functionalized form below)
 
@@ -186,6 +190,8 @@ end
 %             plot(real(Kz(:)).',squeeze(squeeze(Srmg(jj,ii,:))),'-o')
 %             drawnow; 
 
+
+ Srmg(find(isnan(Srmg))) = 0;
 %apply inverst FFT to get image
   fxy = fftshift(ifftn(Srmg));
 % fxy = ifftn(ifftshift(Srmg));
@@ -197,12 +203,12 @@ image=(abs(fxy)/max(abs(fxy(:))));
 xx=linspace(-Lx/2,Lx/2,size(image,2));
 yy=linspace(-Ly/2,Ly/2,size(image,1));
 
- zz=linspace(-c*numel(f)/(2*BW)/2,c*numel(f)/(2*BW)/2,numSampling);
+zz=linspace(-c*numel(f)/(2*BW)/2,c*numel(f)/(2*BW)/2,numSampling);
 %  zz=linspace(0,c*numel(f)/(2*BW),numel(f));
 
-    figure(1); cla; subplot(2,2,2); cla;
+    figure(1); cla; subplot(2,1,2); cla;
     set(gcf,'color','white'); colormap('parula');
-    vol3d('Cdata',image.^1,'xdata',xx,'Ydata',yy,'Zdata',zz);
+    vol3d('Cdata',image.^1.5,'xdata',xx,'Ydata',yy,'Zdata',zz);
     axis equal; axis tight; view(3);
     zlabel('downrange (m)'); xlabel('x crossrange (m)');  ylabel('y crossrange (m)');
 
@@ -298,4 +304,67 @@ end
 % close the writer object
 close(writerObj);
  
+%% g=Hf
 
+%% Reconstruct
+%reconstruction zone
+
+xvec = -0.3:0.0075:0.3;
+yvec = -0.3:0.0075:0.3;
+zvec = 0.45:0.015:0.7;
+
+[xi,yi,zi] = meshgrid(xvec, yvec, zvec);
+
+kr=(2*pi*f/c).';
+%generate H !!! too large keep in memory
+% H=zeros(length(kr)*numel(X),numel(xi(:)), 'single'); 
+
+% for ii=1:numel(X)
+% 
+%         Di = sqrt((X(ii)-xi(:)).^2+(Y(ii)-yi(:)).^2 + zi(:).^2).';
+%         
+%         %measurement matrix; note di is n x 1 and k is 1 x n vector
+%         H(1+(ii-1)*length(kr):ii*length(kr),:) =...
+%           single(((1./Di).*exp(-1j*kr.*Di)).*((1./Di).*exp(-1j*kr.*Di)));
+% 
+%       if mod(ii,1)==0;
+%           ii
+%       end
+% end 
+
+
+fest=zeros(numel(xi),1);
+size(fest)
+
+for ii=1:numel(xi)
+
+        Di = sqrt((X(:)-xi(ii)).^2+(Y(:)-yi(ii)).^2 + zi(ii).^2).';
+        
+        %measurement matrix; note di is 1 x n and k is n x 1 vector
+        %calulate fest one row at a time (to conserve memory)
+         fii= single(((1./Di).*exp(-1j*kr.*Di)).*((1./Di).*exp(-1j*kr.*Di)));
+
+          fest(ii) = fii(:)'*reshape(permute(measurements,[3, 1, 2]),[],1);
+      if mod(ii,100)==0;
+          ii
+      end
+end 
+clear f_image;
+f_image=reshape(fest,length(yvec),length(xvec),length(zvec));
+f_image=abs(f_image)/max(abs(f_image(:)));
+
+%% plot g=HF
+
+%labeling
+xx=xvec;
+yy=yvec;
+zz=zvec;
+%  zz=linspace(0,c*numel(f)/(2*BW),numel(f));
+
+    figure(1); cla; subplot(2,1,2); cla;
+    set(gcf,'color','white'); colormap('parula');
+    vol3d('Cdata',f_image.^1.5,'Xdata',xx,'Ydata',yy,'Zdata',zz);
+    axis equal; axis tight; view(180,-90);
+    zlabel('downrange (m)'); xlabel('x crossrange (m)');  ylabel('y crossrange (m)');
+
+     drawnow;
