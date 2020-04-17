@@ -13,11 +13,10 @@ c=2.99792458*10^8;
 f0  = 24E9;            % GHz
 BW  = 2E9;             % GHz
 T   = 0.125E-3;        % ms Sweep Time !!!!!
-Nt   = 1024;           % number of measurement points (mixed down)
-th  = 0:1/(26E9)/2:T;  % fast time sampling (for simulator only)
+Nt   = 256%1024;           % number of measurement points (mixed down)
+th  = 0:1/(26E9)/2:T-1/(26E9)/2;  % fast time sampling (for simulator only)
 d_th = mean(diff(th)); % time step (for simulator only)
 alpha=(BW/T);          % frequency ramp rate
-
 
 % baseband sampling
 ts  =linspace(0,T,Nt); % Baseband time sampling sampling
@@ -31,7 +30,7 @@ st =exp(1.0j*2*pi*ft(th).*th);       %chirp functon
 
 % Received signal
 % Delay time
-tau =2E-9 %ns
+tau = 2*.06/c%2E-9 %ns
 sr = exp(1.0j*2*pi*ft(th-tau).*(th-tau)); %delayed signal
 sm = real(st).*real(sr);                  %mixed signal, note mixed in real domain
 
@@ -50,7 +49,7 @@ subplot(3,1,2) %plot mixed siginal signal
 plot(th,real(sm))
 
 subplot(3,1,3); %plot out signal in frequency domain
-th_freqs = -1/(2*d_th):1/(T):1/(2*d_th); 
+th_freqs = -1/(2*d_th):1/(T):1/(2*d_th)-1/T; 
 st_FFT=ifftshift(fft(st));
 plot(th_freqs,abs(st_FFT)); hold on;
 
@@ -129,7 +128,7 @@ target(floor(4*end/5),floor(4*end/5)) = 1;
 target(floor(end/3),floor(end/3)) = 1;
 
 subplot(2,1,1)
-imagesc(xvec,yvec,target)
+imagesc(xvec-x1,yvec-y1,target)
 axis equal; axis tight; axis xy;
 % generate received_signal
 
@@ -216,7 +215,7 @@ image= abs(image)/max(abs(image(:)));
 
 figure(4)
 subplot(2,1,2)
-imagesc(xvec, yvec,image)
+imagesc(xvec-x1, yvec-y1,image)
 axis equal; axis xy; axis tight;
 %solve for image
 % Kr = (4*pi/c)*(BW/T)*(fc/(BW/T)-ts);
@@ -224,77 +223,45 @@ axis equal; axis xy; axis tight;
 % Ky = sqrt(Kr.^2-Kx.^2)
 %calculate fields at measurement position
 
-%% reconstruct with RMA (OLD)
-f = linspace(f0,f0+BW,Nt); % start frequency plus radio bandwidth, sampling at IF frequency with Nt points
-x1 = mean(xpath); % middle positio of imaging vehicle track
-
-dx=mean(diff(xpath)); %sample spacing
-Lx=abs(xpath(end)-xpath(1)); %length of x path
-
-Ly=abs(yvec(end)-yvec(1)); % size of reconstruction y zone
-dy=abs(mean(diff(yvec)));  % size of y map spacing
-
-
-[Kx, Ky] = meshgrid(-2*pi/(2*dx):2*pi/(Lx):2*pi/(2*dx),-2*pi/(2*dy):2*pi/(Ly):2*pi/(2*dy));
-
-Kr = 4*pi*f/c;
-
-figure(5)
-subplot(3,1,1)
-imagesc(abs(sb(1:114,:))); axis equal; axis tight; 
-
-%fast axis 
-sb_f_xn=ifftshift(fft(sb,[],1),1);
-sb_kr_xn=sb_f_xn*(2*pi/c);
-subplot(4,1,1)
-imagesc(xpath,Kr, abs(sb_kr_xn)); axis xy; axis tight;  
-%slow axis
-sb_kr_kxn= ifftshift(fft(fftshift(sb_kr_xn,2),[],2),2);
-subplot(4,1,2)
-imagesc(Kx(1,:),Kr, abs(sb_kr_kxn)); axis xy; axis tight;
-sb_kx_ky=sb_kr_kxn.*exp(1j*R*sqrt((Kr.').^2-Kx.^2)*y1-1j*Kx*x1);
-
-subplot(4,1,3)
-imagesc(Kx(:,1), Kr, abs((sb_kx_ky))); axis xy; axis tight;axis equal;
-
-
-Sb_x_y= ifftshift(ifft(fftshift(ifftshift(ifft(fftshift(sb_kx_ky,1),[],1),1),2),[],2),2);
-
-
-subplot(4,1,4)
-imagesc(xpath, yvec,abs(Sb_x_y)), axis xy, axis tight; axis equal;
-
-
-%%%%%%%%%%%%%%%%%%
 %% reconstruct with RMA
-f  = linspace(f0,f0+BW,Nt);
-x1 = mean(xpath);
-y1 = mean(yvec);
-% dx = mean(diff(xpath));
-Lx = abs(xpath(end)-xpath(1));
+% f  = linspace(f0,f0+BW,Nt); %freq Range
+x1 = mean(xpath);           % center of image, x
+y1 = mean(yvec);            % center of image, y                
 
-Ly=abs(yvec(end)-yvec(1));
-% dy=abs(mean(diff(yvec)));
+%imaging regime size
+Lx = abs(xvec(end)-xvec(1));
+Ly = abs(yvec(end)-yvec(1));
+
+%stepsize of measurements   
+dx = abs(mean(diff(xpath)));
 
 %zero pad
 pad_Nx = 2.^(nextpow2(size(sb,2))); 
-% pad_Nx = 2^8; %%%%%%%%%!!!!!!!!!!!!!
-dx    = Lx/(pad_Nx-1);
-% dy    = 
-
 pad_Nr = 2.^(nextpow2(size(sb,1)));
+
+dxi = Lx/(pad_Nx-1);
+
+% Kr spatial frequency rage (min, max); from
+% exp(1j*2*pi*(f0*tau+alpha*tau*ts) = exp(1j*2*Kr*r)
 KrMin = (4*pi/c)*alpha*(f0/alpha+ts(1).');
 KrMax = (4*pi/c)*alpha*(f0/alpha+ts(end).');
+dkr   = abs(mean(diff((4*pi/c)*alpha*(f0/alpha+ts.'))));
+
 % dr    = (KrMax-KrMin)/(pad_Nr-1);
 
 % [Kx, Kr] = meshgrid(-2*pi/(2*dx):2*pi/(Lx):2*pi/(2*dx),(4*pi/c)*alpha*(f0/alpha+ts.'));
- [Kx, Kr] = meshgrid(linspace(-2*pi/(2*dx),2*pi/(2*dx),pad_Nx),(4*pi/c)*alpha*(f0/alpha+ts.'));
-% [Kx, Kr] = meshgrid(linspace(-2*pi/(2*dx),2*pi/(2*dx),pad_Nx),linspace(KrMin,KrMax, pad_Nr));
+%   [Kx, Kr] = meshgrid(linspace(-2*pi/(2*dx),2*pi/(2*dx)-2*pi/(Lx),size(sb,2)),(4*pi/c)*alpha*(f0/alpha+ts.'));
+% [Kx, Kr] = meshgrid(linspace(-2*pi/(2*dxi),2*pi/(2*dxi),pad_Nx),linspace(KrMin,KrMax, pad_Nr));
+[Kx, Kr] = meshgrid(linspace(-2*pi/(2*dxi),2*pi/(2*dxi),pad_Nx),0:dkr:KrMax);
 
+
+
+%Calcualte associated Ky component
 Ky=sqrt(Kr.^2-Kx.^2);
 Ky=real(Ky);
 
-figure(5) %plot fields pre-RMA application
+%plot fields pre-RMA application
+figure(5)
 subplot(1,3,1)
 imagesc(xvec, ts, real(sb));  axis xy; axis tight; 
 
@@ -303,47 +270,70 @@ imagesc(xvec, ts, imag(sb));  axis xy; axis tight;
 
 subplot(1,3,3)
 imagesc(xvec, ts, angle(sb)); axis xy; axis tight;
-%fast axis 
-% sb_f_xn  = ifftshift(fft(sb,[],1),1);
-% sb_f_xn  = fft(sb,[],1);
-sb_f_xn = sb;
 
-sb_kr_xn = sb_f_xn;
+%conjugate signal 
+wc = 2*pi*f';
+wc = repmat(wc,1,size(sb,2));
 
+sb_kr_xn = conj(sb.*exp(-j*wc.*ts')); %!!!!!!!!!!!!!!!!!!!!!!
 
 %slow axisimagesc(xpath,Kr(1,:), abs(sb_kr_xn)); axis xy; axis tight;  
 
+%fft slow axis
+clear sb_kr_kxn;
 sb_kr_kxn= ifftshift(fft(fftshift(sb_kr_xn,2),[],2),2);
-% sb_kr_kxn= (1/dx)*ifftshift(fft(fftshift(sb_kr_xn),[],2));
-
-sb_kr_kxn = padarray(sb_kr_kxn,[ceil((pad_Nr-size(sb,1))/2), ceil((pad_Nx-size(sb,2))/2)],0,'pre');
-sb_kr_kxn = padarray(sb_kr_kxn,[floor((pad_Nr-size(sb,1))/2), floor((pad_Nx-size(sb,2))/2)],0,'post');
 
 
+% add zero padding
+sb_kr_kxn = padarray(sb_kr_kxn,[ceil((length(Kr(:,1))-size(sb,1))), ceil((pad_Nx-size(sb,2))/2)],0,'pre'); %note, adding paddig to end here Kr
+% sb_kr_kxn = padarray(sb_kr_kxn,[floor((pad_Nr-size(sb,1))), floor((pad_Nx-size(sb,2))/2)],0,'post');
+sb_kr_kxn = padarray(sb_kr_kxn,[0, floor((pad_Nx-size(sb,2))/2)],0,'post');
+
+
+
+% Sxy=padarray(Sxy,[ceil((pad-size(measurements,1))/2), ceil((pad-size(measurements,2))/2)],0,'pre');
+% Sxy=padarray(Sxy,[floor((pad-size(measurements,1))/2), floor((pad-size(measurements,2))/2)],0,'post');
+
+% plot fields post fft
 figure(6)
 subplot(4,1,1)
-imagesc(Kx(1,:),Kr(:,1), angle(sb_kr_kxn)); axis xy; axis tight;
-title('spatial frequency domain (phase)')
+imagesc(Kx(1,:),Kr(:,1), abs(sb_kr_kxn)); axis xy; axis tight;
+imagesc(abs(sb_kr_kxn)); axis xy; axis tight;
+
+title('spatial frequenc ydomain (phase)')
 %shift
-sb_kr_kxn_mf=sb_kr_kxn.*exp(1j*R*sqrt(Kr.^2-Kx.^2)-1j*Kx*x1);
+sb_kr_kxn_mf=sb_kr_kxn.*exp(1j*R*sqrt(Kr.^2-Kx.^2)-1j*1/sqrt(2)*Kx*x1);
 
 subplot(4,1,2)
-imagesc(Kx(1,:),Kr(:,1), abs(sb_kr_kxn_mf)); axis xy; axis tight;
+imagesc(Kx(1,:),Kr(:,1), angle(sb_kr_kxn_mf)); axis xy; axis tight;
 title('mag post matched filter')
 xlabel('Kx(rad/m)')
 ylabel('Kr(rad/m)')
 
-Ky_min = min(min(Ky(Ky~=0)));
-Ky_max = max(max(Ky));
+% Ky_min = min(min(Ky(Ky~=0)));
+% Ky_min =0;
+% Ky_max = max(max(Ky));
 
-numSampling = 2^nextpow2(length(yvec)+100); %opt 2 (sample at next power of 2)
+subplot(4,1,3)
+imagesc(Kx(1,:),Kr(:,1), Ky); axis xy; axis tight;
+title('abs(Ky)')
+xlabel('Kx(rad/m)')
+ylabel('Kr(rad/m)')
+
+% Ky = padarray(Ky,[0, ceil((pad_Nx-size(sb,2))/2)],0,'pre');
+% Ky = padarray(Ky,[floor((pad_Nr-size(sb,1))), floor((pad_Nx-size(sb,2))/2)],0,'post');
+
+numSampling = 2^nextpow2(size(sb_kr_kxn_mf,1)+10000); %opt 2 (sample at next power of 2)
+ numSampling = size(sb_kr_kxn_mf,1); %opt 2 (sample at next power of 2)
 
 
 % numSampling = 2^nextpow2(length(yvec)); %opt 2 (sample at next power of 2)
 
 % numSampling = 2^(nextpow2(size(sb_kr_kxn,1))); %opt 2 (sample at next power of 2) 
 
-Ky_resample = linspace(-Ky_min,Ky_max, numSampling).';
+
+dky_resample = 2*Ky_max/(numSampling-1);
+Ky_resample = linspace(-Ky_max,Ky_max, numSampling).';
 % dy_rescale=
 
 % dy_resample=2*pi/(Ky_max-Ky_min);
@@ -355,12 +345,12 @@ sb_kx_ky = zeros(length(Ky_resample),size(sb_kr_kxn_mf,2));
 for jj = 1:size(sb_kr_kxn_mf,2)
    indx_vec = squeeze(squeeze(real(Ky(:,jj))~=0));
     if ~(sum(indx_vec)==0 || sum(indx_vec)==1) %check that there are enough points to interpolate
-    sb_kx_ky(:,jj) = interp1(Ky(indx_vec,jj), sb_kr_kxn_mf(indx_vec,jj), Ky_resample, 'nearest'); 
+    sb_kx_ky(:,jj) = interp1(Ky(indx_vec,jj), sb_kr_kxn_mf(indx_vec,jj), Ky_resample, 'linear'); 
          end 
 end
 
     %debug stolt interp step: plot interpolatio for z-slice
-            jj=56;
+            jj=156;
 %             indx_vec = squeeze(squeeze(real(Ky(:,jj))~=0));
             %debug
             figure(300); clf; 
@@ -371,11 +361,25 @@ end
 %      end 
 % end
 figure(6)
-subplot(4,1,3)
+subplot(4,1,4)
 imagesc(Kx(1,:),Ky_resample(:,1), abs(sb_kx_ky)); axis xy; axis tight;
 title('mag after stolt interpolation')
 xlabel('Kx(rad/m)')
 ylabel('Ky(rad/m)')
+
+% 
+% dfy_resample=mean(diff(Ky_resample))/(2*pi);
+% 
+% (numSampling-1)*1/dfy_resample
+
+% yveci=-2*pi/(2*dky_resample)-2*pi/(2*Ky_max-dky_resample):2*pi/(2*Ky_max+dky_resample):2*pi/(2*dky_resample);
+yveci=linspace(-2*pi/(2*dky_resample),2*pi/(2*dky_resample),numSampling);
+
+
+% xveci=linspace(-Lx/2,Lx/2,pad_Nx);
+dKx = abs(mean(diff(Kx(1,:))));
+BKx = 2*max(max(Kx));
+xveci =( -2*pi/(2*dKx):2*pi/(BKx):2*pi/(2*dKx)); 
 
 sb_kx_ky(find(isnan(sb_kx_ky))) = 0;
 
@@ -383,21 +387,37 @@ sb_kx_ky(find(isnan(sb_kx_ky))) = 0;
 % % sb_kx_y = (ifft(sb_kx_ky,[],1));
 % % sb_x_y  = (ifft(sb_kx_y,[],2));
 % 
-sb_kx_y = fftshift(ifft(ifftshift(sb_kx_ky,1),[],1),1);
-% sb_kx_y = fftshift(ifft(sb_kx_ky,[],1),1);
+sb_kx_y = ifftshift(ifft(fftshift(sb_kx_ky,1),[],1),1);
+% % sb_kx_y = fftshift(ifft(sb_kx_ky,[],1),1);
 
-subplot(4,1,4)
-imagesc(xvec,Ky_resample(:,1),abs(sb_kx_y)); axis xy; axis tight;
+% figure(10)
+% subplot(2,1,1)
+% imagesc(Kx(1,:),yveci,abs(sb_kx_y)); axis xy; axis tight;
+% title('mag after fft Y direction')
+% xlabel('Kx(rad/m)')
+% ylabel('Ky(rad/m)')
+% 
+% subplot(2,1,2)
+% imagesc(Kx(1,:),yveci,abs(fftshift(sb_kx_y,1))); axis xy; axis tight;
+% title('mag after fft Y direction')
+% xlabel('Kx(rad/m)')
+% ylabel('Ky(rad/m)')
+
+
+figure(7)
+subplot(2,1,1)
+imagesc(Kx(1,:),yveci,abs(sb_kx_y)); axis xy; axis tight;
 title('mag after fft Y direction')
 xlabel('Kx(rad/m)')
 ylabel('Ky(rad/m)')
 
+sb_x_y  =ifftshift(fft(fftshift(sb_kx_y,2),[],2),2);
 
-
-sb_x_y  = fftshift(ifft(ifftshift(sb_kx_y,2),[],2),2);
-figure(7)
-imagesc(xvec-x1,yvec-y1,abs(sb_x_y)); axis xy; axis tight; axis equal;
+subplot(2,1,2)
+imagesc(xveci,yveci,abs(sb_x_y)); axis xy; axis tight; axis equal;
 title('Reconstructed Image (fft X and Y)')
+% % ylim([0,max(max(yveci))])
+ylim([-.1,.1])
 xlabel('X(m)')
 ylabel('Y(m)')
 
